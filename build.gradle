@@ -1,0 +1,18 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+}
+
+group 'nl.elec332.gradle'
+version '0.1-Alpha'
+
+sourceCompatibility = 1.8
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'nl.elec332.gradle.nativeplugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.NativePlugin'
+        }
+    }
+}
