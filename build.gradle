@@ -1,6 +1,7 @@
 plugins {
     id 'java-gradle-plugin'
     id 'groovy'
+    id "com.gradle.plugin-publish" version "0.11.0"
 }
 
 group 'nl.elec332.gradle'
@@ -10,9 +11,17 @@ sourceCompatibility = 1.8
 
 gradlePlugin {
     plugins {
-        simplePlugin {
+        nativePlugin {
             id = 'nl.elec332.gradle.nativeplugin'
             implementationClass = 'nl.elec332.gradle.nativeplugin.NativePlugin'
+            displayName = 'NativePlugin (JavaCPP)'
+            description = "A Gradle plugun to simplify native java development with the help of JavaCPP"
         }
     }
+}
+
+pluginBundle {
+    website = 'https://github.com/Elec332/GradleJavaCppPlugin'
+    vcsUrl = 'https://github.com/Elec332/GradleJavaCppPlugin.git'
+    tags = ['java', 'native', 'cpp', 'javacpp']
 }
