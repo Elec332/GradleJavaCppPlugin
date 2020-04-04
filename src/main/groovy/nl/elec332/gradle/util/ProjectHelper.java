@@ -9,6 +9,8 @@ import org.gradle.api.tasks.SourceSetContainer;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 
 /**
  * Created by Elec332 on 31-3-2020
@@ -60,6 +62,11 @@ public class ProjectHelper {
         return getDefaultSourceFolder(task.getProject());
     }
 
+    @Nonnull
+    public static File getBuildFolder(Task task) {
+        return Objects.requireNonNull(getBuildFolder(task.getProject()));
+    }
+
     /////////////////////////
 
     @Nonnull
@@ -107,8 +114,37 @@ public class ProjectHelper {
         return Objects.requireNonNull(project.file("src"));
     }
 
+    @Nonnull
+    public static File getBuildFolder(Project project) {
+        return Objects.requireNonNull(project.getBuildDir());
+    }
+
+    public static Task getBuildTask(Project project) {
+        return getTaskByName(project, "build");
+    }
+
     public static Task getTaskByName(Project project, String name) {
         return project.getTasks().getByName(name);
+    }
+
+    public static void beforeTaskGraphDone(Project project, Runnable runnable) {
+        beforeTaskGraphDone(project, s -> true, runnable);
+    }
+
+    public static void afterNativeModelExamined(Project project, Runnable cb) {
+        ProjectHelper.beforeTaskGraphDone(project,
+                str -> str.toLowerCase().contains("assembledependents") && str.toLowerCase().contains("library")
+        , cb);
+    }
+
+    public static void beforeTaskGraphDone(Project project, Predicate<String> nameMatcher, Runnable runnable) {
+        AtomicBoolean ran = new AtomicBoolean(false);
+        project.getTasks().configureEach(a -> {
+            if (!ran.get() && nameMatcher.test(a.getPath())) {
+                ran.set(true);
+                runnable.run();
+            }
+        });
     }
 
 }

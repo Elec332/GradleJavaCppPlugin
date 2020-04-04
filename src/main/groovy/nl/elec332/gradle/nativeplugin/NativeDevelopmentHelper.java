@@ -1,11 +1,11 @@
 package nl.elec332.gradle.nativeplugin;
 
 import org.gradle.language.cpp.CppSourceSet;
-import org.gradle.nativeplatform.NativeComponentSpec;
 import org.gradle.nativeplatform.NativeLibrarySpec;
 import org.gradle.nativeplatform.platform.NativePlatform;
 import org.gradle.nativeplatform.platform.OperatingSystem;
 import org.gradle.nativeplatform.platform.internal.ArchitectureInternal;
+import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -23,10 +23,12 @@ public class NativeDevelopmentHelper {
 
     @SuppressWarnings("UnstableApiUsage")
     public static String getLibName(NativePlatform targetPlatform) {
-        if (targetPlatform.getOperatingSystem().isWindows()) {
-            return ".lib";
-        }
-        return ".so";
+        return getOperatingSystemInfo(targetPlatform).getLinkLibrarySuffix();
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    public static org.gradle.internal.os.OperatingSystem getOperatingSystemInfo(NativePlatform platform) {
+        return ((OperatingSystemInternal) platform.getOperatingSystem()).getInternalOs();
     }
 
     @SuppressWarnings("all")
@@ -40,22 +42,28 @@ public class NativeDevelopmentHelper {
             osName = "windows";
         } else if (os.isLinux()) {
             osName = "linux";
-        } else if (os.isSolaris()) {
-            throw new UnsupportedOperationException();
         } else if (os.isMacOsX()) {
             osName = "macosx";
-        } else if (os.isFreeBSD()) {
+        } else if (os.isFreeBSD() || os.isSolaris()) {
             throw new UnsupportedOperationException();
         }
 
         if (platform.isAmd64()) {
             archName = "x86_64";
         } else if (platform.isArm()) {
-            archName = "arm64";
+            archName = "arm";
         } else if (platform.isI386()) {
             archName = "x86";
         } else if (platform.isIa64()) { //Get out
             throw new UnsupportedOperationException();
+        } else {
+            if (platform.getName().contains("arm-")) {
+                archName = "arm64";
+            } else if (platform.getName().contains("ppc64")) {
+                archName = "ppc64le";
+            } else {
+                throw new UnsupportedOperationException();
+            }
         }
 
         return osName + "-" + archName;
