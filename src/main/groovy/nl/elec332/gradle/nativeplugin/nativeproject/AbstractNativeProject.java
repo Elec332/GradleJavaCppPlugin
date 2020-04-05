@@ -3,10 +3,7 @@ package nl.elec332.gradle.nativeplugin.nativeproject;
 import groovy.transform.VisibilityOptions;
 import groovy.transform.options.Visibility;
 import org.gradle.internal.impldep.com.google.common.collect.HashMultimap;
-import org.gradle.internal.impldep.com.google.common.collect.Multimaps;
-import org.gradle.internal.impldep.com.google.common.collect.Multiset;
 import org.gradle.internal.impldep.com.google.common.collect.SetMultimap;
-import org.gradle.internal.impldep.org.apache.commons.collections.MultiMap;
 
 import java.io.File;
 import java.util.*;

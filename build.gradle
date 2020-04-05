@@ -5,9 +5,9 @@ plugins {
 }
 
 group 'nl.elec332.gradle'
-version '0.1-Alpha'
+version '0.2.1-Beta'
 
-sourceCompatibility = 1.8
+sourceCompatibility = targetCompatibility = 1.8
 
 gradlePlugin {
     plugins {
@@ -21,7 +21,7 @@ gradlePlugin {
             id = 'nl.elec332.gradle.nativeplugin.javacpp'
             implementationClass = 'nl.elec332.gradle.nativeplugin.javacpp.JavaCPPPlugin'
             displayName = 'Gradle JavaCPP Plugin'
-            description = "A Gradle plugun to simplify native java development with the help of JavaCPP"
+            description = "A Gradle plugin to simplify native java development with the help of JavaCPP"
         }
     }
 }

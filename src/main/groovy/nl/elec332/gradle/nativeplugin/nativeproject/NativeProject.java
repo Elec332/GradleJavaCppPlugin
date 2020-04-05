@@ -9,13 +9,14 @@ import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.function.Consumer;
 
 /**
  * Created by Elec332 on 3-4-2020
  */
-public class NativeProject extends AbstractNativeProject{
+public class NativeProject extends AbstractNativeProject {
 
     @SuppressWarnings("UnstableApiUsage")
     public NativeProject(String name, Project project) {

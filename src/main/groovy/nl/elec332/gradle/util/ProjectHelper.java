@@ -134,7 +134,7 @@ public class ProjectHelper {
     public static void afterNativeModelExamined(Project project, Runnable cb) {
         ProjectHelper.beforeTaskGraphDone(project,
                 str -> str.toLowerCase().contains("assembledependents") && str.toLowerCase().contains("library")
-        , cb);
+                , cb);
     }
 
     public static void beforeTaskGraphDone(Project project, Predicate<String> nameMatcher, Runnable runnable) {

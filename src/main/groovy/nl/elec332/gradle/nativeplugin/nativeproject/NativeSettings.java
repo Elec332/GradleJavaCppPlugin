@@ -6,7 +6,6 @@ import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.internal.extensibility.DefaultExtraPropertiesExtension;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -20,7 +19,7 @@ import java.util.function.Consumer;
 /**
  * Created by Elec332 on 3-4-2020
  */
-public class NativeSettings extends DefaultExtraPropertiesExtension {
+public class NativeSettings {
 
     @SuppressWarnings("UnstableApiUsage")
     public NativeSettings(Project project) {
