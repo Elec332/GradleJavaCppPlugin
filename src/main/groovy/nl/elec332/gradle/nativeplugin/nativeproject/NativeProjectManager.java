@@ -29,7 +29,7 @@ public class NativeProjectManager {
         ProjectHelper.afterNativeModelExamined(project, () -> {
             for (NativeProject nativeProject : sortedProjects) {
                 for (String s : settings.getProjectDependencies(nativeProject)) {
-                    nativeProject.localLibs.putAll(Objects.requireNonNull(projects.getByName(s)).localLibs);
+                    nativeProject.importLibs(Objects.requireNonNull(projects.getByName(s)));
                     nativeProject.localLinks.addAll(Objects.requireNonNull(projects.getByName(s)).localLinks);
                 }
                 nativeProject.cfgCallback.forEach(Runnable::run);

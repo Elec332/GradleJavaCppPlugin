@@ -1,11 +1,12 @@
 package nl.elec332.gradle.nativeplugin;
 
+import nl.elec332.gradle.util.JavaPluginHelper;
+import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.internal.jvm.Jvm;
+import org.gradle.nativeplatform.NativeBinarySpec;
 import org.gradle.nativeplatform.NativeLibrarySpec;
 import org.gradle.nativeplatform.PreprocessingTool;
 import org.gradle.nativeplatform.Tool;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
 import org.gradle.nativeplatform.platform.NativePlatform;
 import org.gradle.nativeplatform.platform.OperatingSystem;
 
@@ -18,15 +19,15 @@ import java.util.function.Consumer;
 @SuppressWarnings("UnstableApiUsage")
 public class CompilerArguments {
 
-    public static void setArgs(NativeBinarySpecInternal binarySpec, PreprocessingTool compiler, BiConsumer<NativePlatform, Consumer<String>> libs) {
-        setArgs(binarySpec.getLinker(), compiler, binarySpec.getTargetPlatform(), NativeDevelopmentHelper.getCppSourceSet((NativeLibrarySpec) binarySpec.getComponent()).getExportedHeaders(), libs);
+    public static void setArgs(Project project, NativeBinarySpec binarySpec, PreprocessingTool compiler, BiConsumer<NativePlatform, Consumer<String>> libs) {
+        setArgs(project, binarySpec.getLinker(), compiler, binarySpec.getTargetPlatform(), NativeDevelopmentHelper.getCppSourceSet((NativeLibrarySpec) binarySpec.getComponent()).getExportedHeaders(), libs);
     }
 
-    public static void setArgs(Tool linker, PreprocessingTool compiler, NativePlatform targetPlatform, SourceDirectorySet headers, BiConsumer<NativePlatform, Consumer<String>> libs) {
+    public static void setArgs(Project project, Tool linker, PreprocessingTool compiler, NativePlatform targetPlatform, SourceDirectorySet headers, BiConsumer<NativePlatform, Consumer<String>> libs) {
         OperatingSystem os = targetPlatform.getOperatingSystem();
 
-        if (true) { //Java present
-            String javaHome = Jvm.current().getJavaHome().getAbsolutePath();
+        if (project.getPluginManager().hasPlugin("java")) { //Java present
+            String javaHome = JavaPluginHelper.getJavaHome();
             if (os.isMacOsX()) {
                 headers.srcDir(javaHome + "/include");
                 headers.srcDir(javaHome + "/include/darwin");

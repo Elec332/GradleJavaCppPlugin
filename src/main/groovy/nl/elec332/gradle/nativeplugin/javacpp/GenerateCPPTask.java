@@ -1,6 +1,7 @@
 package nl.elec332.gradle.nativeplugin.javacpp;
 
 import nl.elec332.gradle.nativeplugin.nativeproject.NativeSettings;
+import nl.elec332.gradle.util.FileHelper;
 import nl.elec332.gradle.util.JavaPluginHelper;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.artifacts.Configuration;
@@ -40,7 +41,7 @@ public class GenerateCPPTask extends DefaultTask {
 
     @TaskAction
     public void generateCPPFiles() {
-        cleanGeneratedFolder();
+        FileHelper.cleanFolder(JavaCPPPlugin.getGeneratedCppFolder(getProject()));
         for (JNIProject project : jniProjects.get()) {
             getProject().javaexec(javaExecSpec -> {
                 javaExecSpec.setMain("org.bytedeco.javacpp.tools.Builder");
@@ -52,22 +53,6 @@ public class GenerateCPPTask extends DefaultTask {
                         "-d", JavaCPPPlugin.getGeneratedCppFolder(getProject()).getAbsolutePath() + File.separator + project.name,
                         project.getMainClassSlashes());
             });
-        }
-    }
-
-    @SuppressWarnings("all")
-    private void cleanGeneratedFolder() {
-        File rootF = JavaCPPPlugin.getGeneratedCppFolder(getProject());
-        if (!rootF.isDirectory()) {
-            throw new RuntimeException();
-        }
-        for (File file : rootF.listFiles()) {
-            if (file.isDirectory()) {
-                for (File file2 : file.listFiles()) {
-                    file2.delete();
-                }
-            }
-            file.delete();
         }
     }
 

@@ -28,10 +28,10 @@ public class NativeProjectRegister {
                 settings.getHeaders(cpp.getExportedHeaders(), Objects.requireNonNull(allProjects.apply(s)));
             }
         }, binarySpec -> {
-            String output = binarySpec.getPrimaryOutput().getAbsolutePath();
+            String output = NativeDevelopmentHelper.getLibraryOutput(binarySpec).getAbsolutePath();
             String ext = output.substring(output.lastIndexOf('.'));
             boolean addLib = binarySpec.getDisplayName().startsWith("shared") || !nativeProject.excludeStaticLibraryCollection;
-            CompilerArguments.setArgs(binarySpec, binarySpec.getCppCompiler(), (platform, linker) -> {
+            CompilerArguments.setArgs(project, binarySpec, binarySpec.getCppCompiler(), (platform, linker) -> {
                 String libExt = NativeDevelopmentHelper.getLibName(platform);
                 String platformName = NativeDevelopmentHelper.getFolderName(binarySpec.getTargetPlatform());
 
@@ -41,7 +41,7 @@ public class NativeProjectRegister {
                         String fileLoc = locationBase + File.separator + s;
                         linker.accept(fileLoc + libExt);
                         if (addLib) {
-                            nativeProject.localLibs.put(platformName, new File(fileLoc + ext));
+                            nativeProject.putLib(platformName, new File(fileLoc + ext));
                             nativeProject.localLinks.add(new File(fileLoc + libExt));
                         }
                     }
@@ -49,11 +49,11 @@ public class NativeProjectRegister {
                 for (String s : settings.getProjectDependencies(nativeProject)) {
                     NativeProject dep = Objects.requireNonNull(allProjects.apply(s));
                     dep.localLinks.forEach(f -> linker.accept(f.getAbsolutePath()));
-                    nativeProject.localLibs.putAll(dep.localLibs);
+                    nativeProject.importLibs(dep);
                 }
 
                 if (addLib) {
-                    nativeProject.localLibs.put(platformName, new File(output));
+                    nativeProject.putLib(platformName, new File(output));
                     nativeProject.localLinks.add(new File(output.replace(ext, libExt)));
                 }
             });

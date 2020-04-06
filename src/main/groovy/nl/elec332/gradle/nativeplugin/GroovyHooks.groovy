@@ -3,8 +3,8 @@ package nl.elec332.gradle.nativeplugin
 import nl.elec332.gradle.util.ProjectHelper
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
+import org.gradle.nativeplatform.NativeBinarySpec
 import org.gradle.nativeplatform.NativeLibrarySpec
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal
 import org.gradle.nativeplatform.platform.NativePlatform
 
 import java.util.function.Consumer
@@ -14,8 +14,8 @@ import java.util.function.Consumer
  */
 class GroovyHooks {
 
-    static void addModelComponent(Project project, String name, Consumer<NativeLibrarySpec> lib, Consumer<NativeBinarySpecInternal> bin) {
-        Set<NativeBinarySpecInternal> stuff = new HashSet<>();
+    static void addModelComponent(Project project, String name, Consumer<NativeLibrarySpec> lib, Consumer<NativeBinarySpec> bin) {
+        Set<NativeBinarySpec> stuff = new HashSet<>();
         project.model {
             components {
                 "$name"(NativeLibrarySpec) {
@@ -27,7 +27,7 @@ class GroovyHooks {
             }
         }
         ProjectHelper.afterNativeModelExamined(project, { ->
-            for (NativeBinarySpecInternal bs : stuff) {
+            for (NativeBinarySpec bs : stuff) {
                 bin.accept(bs)
             }
         })

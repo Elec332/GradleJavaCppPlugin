@@ -5,7 +5,7 @@ import groovy.transform.options.Visibility;
 import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.Project;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.nativeplatform.internal.NativeBinarySpecInternal;
+import org.gradle.nativeplatform.NativeBinarySpec;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -41,7 +41,7 @@ public class NativeProject extends AbstractNativeProject {
         localDependencies.addAll(otherProject.localDependencies);
         platforms.addAll(otherProject.platforms);
         projectDependencies.addAll(otherProject.projectDependencies);
-        onConfigured(() -> otherProject.localLibs.putAll(localLibs));
+        onConfigured(() -> otherProject.importLibs(NativeProject.this));
     }
 
     public final SourceDirectorySet source;
@@ -50,7 +50,7 @@ public class NativeProject extends AbstractNativeProject {
     final Project project;
     final Collection<File> localLinks;
     final Collection<Runnable> cfgCallback;
-    final Collection<Consumer<NativeBinarySpecInternal>> specCallback;
+    final Collection<Consumer<NativeBinarySpec>> specCallback;
 
     @Inject
     public boolean includeDefaultCCode = true;
@@ -71,7 +71,7 @@ public class NativeProject extends AbstractNativeProject {
         cfgCallback.add(callback);
     }
 
-    public void configureSpec(Consumer<NativeBinarySpecInternal> callback) {
+    public void configureSpec(Consumer<NativeBinarySpec> callback) {
         specCallback.add(callback);
     }
 

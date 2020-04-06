@@ -61,14 +61,19 @@ public class JavaCPPPlugin implements Plugin<Project> {
         JavaPluginHelper.getClassesTask(project).dependsOn(copyFiles);
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private Configuration createJavaCPPConfiguration(Project project, ExtraPropertiesExtension deps) {
         final Configuration ret = project.getConfigurations().create(JAVACPP_CONFIGURATION);
         ProjectHelper.getCompileConfiguration(project).extendsFrom(ret);
-        project.getGradle().getTaskGraph().whenReady(graph -> {
+
+        //Make sure this is the last callback
+        //Cannot be run when taskgraph is ready, as defaultDependencies doesn't get called with actions like "clean"
+        ProjectHelper.beforeTaskGraphDone(project, () -> ret.withDependencies(a -> {
             if (ret.getAllDependencies().isEmpty()) {
                 throw new IllegalStateException("JavaCPP not configured!");
             }
-        });
+        }));
+
         ret.defaultDependencies(dependencies -> dependencies.add(project.getDependencies().create("org.bytedeco:javacpp:" + deps.get(DEFAULT_JCPP_VERSION))));
         return ret;
     }

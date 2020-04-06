@@ -4,6 +4,7 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.internal.jvm.Jvm;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -12,6 +13,11 @@ import java.util.Objects;
  * Created by Elec332 on 31-3-2020
  */
 public class JavaPluginHelper {
+
+    @Nonnull
+    public static String getJavaHome() {
+        return Jvm.current().getJavaHome().getAbsolutePath();
+    }
 
     @Nonnull
     public static Task getClassesTask(Project project) {

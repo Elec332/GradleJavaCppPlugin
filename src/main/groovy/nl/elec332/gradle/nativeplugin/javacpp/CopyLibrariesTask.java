@@ -1,5 +1,6 @@
 package nl.elec332.gradle.nativeplugin.javacpp;
 
+import nl.elec332.gradle.util.FileHelper;
 import nl.elec332.gradle.util.JavaPluginHelper;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
@@ -33,9 +34,7 @@ public class CopyLibrariesTask extends DefaultTask {
             String rootDest = destinationDir.getAbsolutePath() + File.separator + project.classPackage.replace(".", File.separator);
             project.getLocalLibraries().forEach((s, files) -> {
                 File platformDir = new File(rootDest, s);
-                if (!platformDir.exists()) {
-                    platformDir.mkdirs();
-                }
+                FileHelper.cleanFolder(platformDir);
                 files.forEach(libLocation -> {
                     File dest = new File(platformDir, libLocation.getName());
                     try {
