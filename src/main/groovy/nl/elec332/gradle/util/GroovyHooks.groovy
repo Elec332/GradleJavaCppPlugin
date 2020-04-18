@@ -1,8 +1,8 @@
-package nl.elec332.gradle.nativeplugin
+package nl.elec332.gradle.util
 
-import nl.elec332.gradle.util.ProjectHelper
 import org.gradle.api.ExtensiblePolymorphicDomainObjectContainer
 import org.gradle.api.Project
+import org.gradle.api.artifacts.maven.MavenDeployer
 import org.gradle.nativeplatform.NativeBinarySpec
 import org.gradle.nativeplatform.NativeLibrarySpec
 import org.gradle.nativeplatform.platform.NativePlatform
@@ -10,7 +10,7 @@ import org.gradle.nativeplatform.platform.NativePlatform
 import java.util.function.Consumer
 
 /**
- * Created by Elec332 on 31-3-2020
+ * Created by Elec332 on 18-4-2020
  */
 class GroovyHooks {
 
@@ -41,5 +41,21 @@ class GroovyHooks {
             }
         }
     }
+    
+    static void addArtifact(Project project, Object from) {
+        project.artifacts {
+            archives from
+        }
+    }
 
+    static void configureMaven(Project project, Consumer<MavenDeployer> consumer) {
+        project.uploadArchives {
+            repositories {
+                mavenDeployer {
+                    consumer.accept(it)
+                }
+            }
+        }
+    }
+    
 }

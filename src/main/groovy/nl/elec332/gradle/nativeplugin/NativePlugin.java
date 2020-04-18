@@ -3,6 +3,7 @@ package nl.elec332.gradle.nativeplugin;
 import nl.elec332.gradle.nativeplugin.nativeproject.NativeProject;
 import nl.elec332.gradle.nativeplugin.nativeproject.NativeProjectManager;
 import nl.elec332.gradle.nativeplugin.nativeproject.NativeSettings;
+import nl.elec332.gradle.util.PluginHelper;
 import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.*;
 import org.gradle.language.cpp.plugins.CppPlugin;
@@ -19,6 +20,7 @@ public class NativePlugin implements Plugin<Project> {
     @Override
     @SuppressWarnings("UnstableApiUsage")
     public void apply(Project project) {
+        PluginHelper.checkMinimumGradleVersion("5.0");
         project.getPluginManager().apply(CppPlugin.class);
 
         NativeSettings settings = project.getExtensions().create("nativeSettings", NativeSettings.class, project);

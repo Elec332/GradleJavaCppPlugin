@@ -1,8 +1,8 @@
 package nl.elec332.gradle.nativeplugin.nativeproject;
 
 import nl.elec332.gradle.nativeplugin.CompilerArguments;
-import nl.elec332.gradle.nativeplugin.GroovyHooks;
 import nl.elec332.gradle.nativeplugin.NativeDevelopmentHelper;
+import nl.elec332.gradle.util.GroovyHooks;
 import org.gradle.api.Project;
 import org.gradle.language.cpp.CppSourceSet;
 

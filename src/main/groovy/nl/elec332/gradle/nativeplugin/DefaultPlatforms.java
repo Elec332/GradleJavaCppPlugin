@@ -1,5 +1,6 @@
 package nl.elec332.gradle.nativeplugin;
 
+import nl.elec332.gradle.util.GroovyHooks;
 import org.gradle.api.Project;
 
 /**
