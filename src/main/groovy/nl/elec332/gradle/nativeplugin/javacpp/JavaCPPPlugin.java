@@ -6,14 +6,22 @@ import nl.elec332.gradle.util.JavaPluginHelper;
 import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.ResolvedDependency;
 import org.gradle.api.artifacts.maven.Conf2ScopeMappingContainer;
 import org.gradle.api.plugins.*;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import static nl.elec332.gradle.nativeplugin.javacpp.MavenHelper.fixMavenPom;
 
 /**
  * Created by Elec332 on 3-4-2020
@@ -27,6 +35,8 @@ public class JavaCPPPlugin implements Plugin<Project> {
     public static final String JAVACPP_CONFIGURATION = "javacpp";
 
     public static final String DEFAULT_JCPP_VERSION = "defaultJavaCPPVersion";
+
+    private static final String JCPP_VERSION = "1.5.2";
 
     @Override
     @SuppressWarnings("UnstableApiUsage")
@@ -42,7 +52,7 @@ public class JavaCPPPlugin implements Plugin<Project> {
         NativeSettings nativeSettings = Objects.requireNonNull(project.getExtensions().findByType(NativeSettings.class));
 
         ExtraPropertiesExtension properties = (ExtraPropertiesExtension) project.getExtensions().getByName(ExtraPropertiesExtension.EXTENSION_NAME);
-        properties.set(DEFAULT_JCPP_VERSION, "1.4.3");
+        properties.set(DEFAULT_JCPP_VERSION, JCPP_VERSION);
         project.getRepositories().mavenCentral();
 
         Configuration jcpp = createJavaCPPConfiguration(project, properties);
@@ -63,7 +73,8 @@ public class JavaCPPPlugin implements Plugin<Project> {
     @SuppressWarnings("UnstableApiUsage")
     private Configuration createJavaCPPConfiguration(Project project, ExtraPropertiesExtension deps) {
         final Configuration ret = project.getConfigurations().create(JAVACPP_CONFIGURATION);
-        ProjectHelper.getCompileConfiguration(project).extendsFrom(ret);
+        Configuration compile = ProjectHelper.getCompileConfiguration(project);
+        compile.extendsFrom(ret);
 
         //Make sure this is the last callback
         //Cannot be run when taskgraph is ready, as defaultDependencies doesn't get called with actions like "clean"
@@ -77,11 +88,42 @@ public class JavaCPPPlugin implements Plugin<Project> {
             Object conv = project.getConvention().getPlugins().get("maven");
             if (conv instanceof MavenPluginConvention) {
                 ((MavenPluginConvention) conv).getConf2ScopeMappings().addMapping(MavenPlugin.COMPILE_PRIORITY, ret, Conf2ScopeMappingContainer.COMPILE);
+                Predicate<ResolvedDependency> isCpp = rd -> rd.getModule().getId().getName().equals("javacpp") && rd.getModule().getId().getGroup().equals("org.bytedeco");
+                fixMavenPom(project, () -> {
+                    List<ResolvedDependency> t = new ArrayList<>();
+                    compile.getResolvedConfiguration().getFirstLevelModuleDependencies().forEach(rd -> {
+                        if (!isCpp.test(rd) || !rd.getModuleVersion().equals(JCPP_VERSION)) {
+                            addAll(rd, isCpp, t::add);
+                        }
+                    });
+                    return t.isEmpty() ? JCPP_VERSION : t.get(0).getModule().getId().getVersion();
+                });
             }
         });
 
-        ret.defaultDependencies(dependencies -> dependencies.add(project.getDependencies().create("org.bytedeco:javacpp:" + deps.get(DEFAULT_JCPP_VERSION))));
+        project.afterEvaluate(p -> {
+            ret.defaultDependencies(dependencies -> {
+                DomainObjectSet<Dependency> dep = compile.getAllDependencies().matching(element ->
+                        element.getGroup() != null && element.getGroup().equals("org.bytedeco") && element.getName().equals("javacpp")
+                );
+
+                if (!dep.isEmpty()) {
+                    dependencies.addAll(dep);
+                } else {
+                    dependencies.add(project.getDependencies().create("org.bytedeco:javacpp:" + deps.get(DEFAULT_JCPP_VERSION)));
+                }
+            });
+        });
         return ret;
+    }
+
+    private void addAll(ResolvedDependency dep, Predicate<ResolvedDependency> filter, Consumer<ResolvedDependency> consumer) {
+        if (filter.test(dep)) {
+            consumer.accept(dep);
+        }
+        for (ResolvedDependency deepDep : dep.getChildren()) {
+            addAll(deepDep, filter, consumer);
+        }
     }
 
     @Nonnull
