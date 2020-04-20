@@ -6,9 +6,8 @@ import nl.elec332.gradle.util.JavaPluginHelper;
 import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.plugins.ExtraPropertiesExtension;
-import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.artifacts.maven.Conf2ScopeMappingContainer;
+import org.gradle.api.plugins.*;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -73,6 +72,13 @@ public class JavaCPPPlugin implements Plugin<Project> {
                 throw new IllegalStateException("JavaCPP not configured!");
             }
         }));
+
+        project.getPlugins().withType(MavenPlugin.class, plugin -> {
+            Object conv = project.getConvention().getPlugins().get("maven");
+            if (conv instanceof MavenPluginConvention) {
+                ((MavenPluginConvention) conv).getConf2ScopeMappings().addMapping(MavenPlugin.COMPILE_PRIORITY, ret, Conf2ScopeMappingContainer.COMPILE);
+            }
+        });
 
         ret.defaultDependencies(dependencies -> dependencies.add(project.getDependencies().create("org.bytedeco:javacpp:" + deps.get(DEFAULT_JCPP_VERSION))));
         return ret;
