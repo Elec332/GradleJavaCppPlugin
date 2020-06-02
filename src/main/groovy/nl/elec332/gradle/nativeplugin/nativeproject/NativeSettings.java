@@ -2,6 +2,7 @@ package nl.elec332.gradle.nativeplugin.nativeproject;
 
 import groovy.transform.VisibilityOptions;
 import groovy.transform.options.Visibility;
+import nl.elec332.gradle.util.InstalledDependency;
 import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
@@ -64,6 +65,11 @@ public class NativeSettings {
     }
 
     @VisibilityOptions(Visibility.PRIVATE)
+    Collection<InstalledDependency> getInstalledDependencies(NativeProject nativeProject) {
+        return new HashSet<>(nativeProject.installedDependencies);
+    }
+
+    @VisibilityOptions(Visibility.PRIVATE)
     void getSource(SourceDirectorySet sources, NativeProject nativeProject) {
         sources.source(nativeProject.source);
         sources.source(defaultSource);
@@ -87,6 +93,9 @@ public class NativeSettings {
         }
         for (String s : getLocalDependencies(nativeProject)) {
             nativeProject.headers.srcDir(libRootFolder + "/" + s + "/include");
+        }
+        for (InstalledDependency i : getInstalledDependencies(nativeProject)) {
+            i.addIncludes(nativeProject.headers);
         }
     }
 

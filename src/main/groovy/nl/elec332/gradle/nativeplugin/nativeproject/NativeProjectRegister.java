@@ -3,6 +3,7 @@ package nl.elec332.gradle.nativeplugin.nativeproject;
 import nl.elec332.gradle.nativeplugin.CompilerArguments;
 import nl.elec332.gradle.nativeplugin.NativeDevelopmentHelper;
 import nl.elec332.gradle.util.GroovyHooks;
+import nl.elec332.gradle.util.InstalledDependency;
 import org.gradle.api.Project;
 import org.gradle.language.cpp.CppSourceSet;
 
@@ -37,12 +38,45 @@ public class NativeProjectRegister {
 
                 for (String s : settings.getLocalDependencies(nativeProject)) {
                     String locationBase = settings.libRootFolder + File.separator + s + File.separator + NativeDevelopmentHelper.getFolderName(platform);
-                    if (new File(locationBase).exists()) {
-                        String fileLoc = locationBase + File.separator + s;
-                        linker.accept(fileLoc + libExt);
+                    File folder = new File(locationBase);
+                    if (folder.exists()) {
+                        File[] stuff = folder.listFiles();
+                        if (stuff == null) {
+                            continue;
+                        }
+                        for (File f : stuff) {
+                            String path = f.getAbsolutePath();
+                            if (path.endsWith(libExt)) {
+                                linker.accept(path);
+                                if (addLib) {
+                                    nativeProject.putLib(platformName, new File(path.replace(libExt, ext)));
+                                    nativeProject.localLinks.add(new File(path));
+                                }
+                                System.out.println(f.getAbsolutePath());
+                            }
+                        }
+//                        String fileLoc = locationBase + File.separator + s;
+//                        linker.accept(fileLoc + libExt);
+//                        if (addLib) {
+//                            nativeProject.putLib(platformName, new File(fileLoc + ext));
+//                            nativeProject.localLinks.add(new File(fileLoc + libExt));
+//                        }
+                    }
+                }
+                for (InstalledDependency iep : settings.getInstalledDependencies(nativeProject)) {
+                    for (String lib : iep.getLibs()) {
+                        if (lib.endsWith(libExt)) {
+                            linker.accept(lib);
+                            if (addLib) {
+                                nativeProject.localLinks.add(new File(lib));
+                            }
+                        }
+                    }
+                    for (String bin : iep.getBinaries()) {
                         if (addLib) {
-                            nativeProject.putLib(platformName, new File(fileLoc + ext));
-                            nativeProject.localLinks.add(new File(fileLoc + libExt));
+                            if (bin.endsWith(ext)) {
+                                nativeProject.putLib(platformName, new File(bin));
+                            }
                         }
                     }
                 }

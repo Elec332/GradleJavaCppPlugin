@@ -39,6 +39,7 @@ public class NativeProject extends AbstractNativeProject {
     @VisibilityOptions(Visibility.PRIVATE)
     public void importFrom(AbstractNativeProject otherProject) {
         localDependencies.addAll(otherProject.localDependencies);
+        installedDependencies.addAll(otherProject.installedDependencies);
         platforms.addAll(otherProject.platforms);
         projectDependencies.addAll(otherProject.projectDependencies);
         onConfigured(() -> otherProject.importLibs(NativeProject.this));
@@ -80,6 +81,7 @@ public class NativeProject extends AbstractNativeProject {
         return "NativeProject{" +
                 "name='" + name + '\'' +
                 ", localDependencies=" + localDependencies +
+                ", installedDependencies=" + installedDependencies +
                 ", projectDependencies=" + projectDependencies +
                 ", platforms=" + platforms +
                 '}';

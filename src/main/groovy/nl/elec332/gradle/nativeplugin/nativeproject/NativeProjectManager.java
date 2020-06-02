@@ -49,9 +49,11 @@ public class NativeProjectManager {
             String fullName = "compile" + lName + name + lName + "Cpp";
             String doneName = nativeProject.name + name;
             prev.finalizedBy(fullName);
+            prev.finalizedBy(doneName);
 
             next.dependsOn(prev);
             next.mustRunAfter(doneName);
+            next.mustRunAfter(fullName);
         });
 
         NativeProjectRegister.registerNativeProject(nativeProject.project, settings, nativeProject, allProjects);

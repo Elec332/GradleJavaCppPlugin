@@ -41,7 +41,7 @@ class GroovyHooks {
             }
         }
     }
-    
+
     static void addArtifact(Project project, Object from) {
         project.artifacts {
             archives from
@@ -57,5 +57,5 @@ class GroovyHooks {
             }
         }
     }
-    
+
 }

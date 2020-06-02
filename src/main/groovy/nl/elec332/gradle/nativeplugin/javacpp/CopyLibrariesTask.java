@@ -9,8 +9,11 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -30,15 +33,20 @@ public class CopyLibrariesTask extends DefaultTask {
     public void copyFiles() {
         JavaCompile jc = JavaPluginHelper.getJavaCompileTask(getProject());
         File destinationDir = jc.getDestinationDir();
+        Set<File> check = new HashSet<>();
         for (JNIProject project : projects.get()) {
             String rootDest = destinationDir.getAbsolutePath() + File.separator + project.classPackage.replace(".", File.separator);
             project.getLocalLibraries().forEach((s, files) -> {
                 File platformDir = new File(rootDest, s);
-                FileHelper.cleanFolder(platformDir);
+                if (check.add(platformDir)) {
+                    FileHelper.cleanFolder(platformDir);
+                }
                 files.forEach(libLocation -> {
                     File dest = new File(platformDir, libLocation.getName());
                     try {
                         Files.copy(libLocation.toPath(), dest.toPath());
+                    } catch (FileAlreadyExistsException e) {
+                        // Ignore
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
