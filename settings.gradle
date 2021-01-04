@@ -1,2 +1,3 @@
 rootProject.name = 'NativePlugin'
 
+includeBuild 'D:/Programming/Github/Java/Gradle/Gradle-Utils'

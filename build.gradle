@@ -5,24 +5,28 @@ plugins {
 }
 
 group 'nl.elec332.gradle'
-version '0.4-Beta'
+version '1.0.0-Alpha'
 
 sourceCompatibility = targetCompatibility = 1.8
+
+dependencies {
+    implementation "nl.elec332.gradle:Gradle-Utils:1.0.0-Alpha"
+}
 
 gradlePlugin {
 
     plugins {
-        nativePlugin {
-            id = 'nl.elec332.gradle.nativeplugin'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.NativePlugin'
-            displayName = 'Gradle Native Development Plugin'
-            description = "A Gradle plugin to simplify development of C and C++"
+        nativeApplicationPlugin {
+            id = 'nl.elec332.gradle.nativeapplicationplugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.NativeApplicationPlugin'
+            displayName = 'Gradle Native Application Development Plugin'
+            description = "A Gradle plugin to simplify application development of C and C++"
         }
-        javaCppPlugin {
-            id = 'nl.elec332.gradle.nativeplugin.javacpp'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.javacpp.JavaCPPPlugin'
-            displayName = 'Gradle JavaCPP Plugin'
-            description = "A Gradle plugin to simplify native java development with the help of JavaCPP"
+        nativeLibraryPlugin {
+            id = 'nl.elec332.gradle.nativelibraryplugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.NativeLibraryPlugin'
+            displayName = 'Gradle Native Library Development Plugin'
+            description = "A Gradle plugin to simplify library development of C and C++"
         }
     }
 
