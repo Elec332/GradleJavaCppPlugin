@@ -3,6 +3,8 @@ package nl.elec332.gradle.nativeplugin.common;
 import nl.elec332.gradle.nativeplugin.api.INativeProjectExtension;
 import nl.elec332.gradle.util.GroovyHooks;
 import nl.elec332.gradle.util.PluginHelper;
+import nl.elec332.gradle.util.ProjectHelper;
+import nl.elec332.gradle.util.Utils;
 import org.gradle.api.*;
 import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
@@ -24,7 +26,10 @@ import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
 import javax.inject.Inject;
+import java.io.File;
 import java.util.Collections;
+import java.util.Locale;
+import java.util.function.Consumer;
 
 /**
  * Created by Elec332 on 6-11-2020
@@ -48,8 +53,8 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
     @Override
     @SuppressWarnings("UnstableApiUsage")
     public void apply(Project project) {
-        PluginHelper.checkMinimumGradleVersion("5.0");
-        NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class);
+        PluginHelper.checkMinimumGradleVersion("6.0");
+        NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project);
 
         project.getConfigurations().create(HEADERS);
         project.getConfigurations().create(WINDOWS_HEADERS);
@@ -57,6 +62,12 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
         project.getConfigurations().create(LINKER);
         project.getConfigurations().create(DYNAMIC);
 
+        File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
+        project.getExtensions().add("includedDeps", "");
+        project.getExtensions().add("excludedDeps", "");
+        System.out.println(generatedHeaders);
+
+        //Set C++ version
         nativeProject.modifyCompiler(compiler -> {
             compiler.getCompilerArgs().addAll(compiler.getToolChain().map(toolChain -> {
                 if (toolChain instanceof VisualCpp) {
@@ -67,9 +78,16 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
             }));
         });
 
+        //Generate include header
+        nativeProject.modifyCompiler(compiler -> {
+            HeaderGenerator.generateHeaders(project, generatedHeaders, nativeProject);
+            compiler.includes(generatedHeaders);
+        });
+
         project.afterEvaluate(p -> {
 
-            if (os.isWindows() && nativeProject.getBuildToolsInstallDir().isPresent()) {
+            //Set VC BuildTools install dir
+            if (os.isWindows() && !Utils.isNullOrEmpty(nativeProject.getBuildToolsInstallDir().get())) {
                 GroovyHooks.configureToolchains(project, nativeToolChains ->
                         nativeToolChains.create("visualCppBT", VisualCpp.class, tc ->
                                 tc.setInstallDir(nativeProject.getBuildToolsInstallDir().get())
@@ -77,44 +95,51 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
                 );
             }
 
+            //Set linkage and add generated headers to output products
             if (isLibrary) {
                 DefaultCppLibrary libSettings = (DefaultCppLibrary) project.getExtensions().getByName("library");
                 libSettings.getLinkage().set(nativeProject.getLinkage());
-                libSettings.addSharedLibrary()
+                libSettings.getApiElements().getOutgoing().artifact(generatedHeaders);
             }
 
+            //Run binary modifiers
+            modifyBinaries(project, binary -> {
+                if (isLibrary) {
+                    Linkage linkage = ((ConfigurableComponentWithLinkUsage) binary).getLinkage();
+                    if (linkage == Linkage.STATIC) {
+                        CppStaticLibrary lib = (CppStaticLibrary) binary;
+                        BinaryConfigurator.configureStaticLibraryBinary(project, nativeProject, lib);
+                        BinaryConfigurator.configureLibraryBinary(project, nativeProject, lib);
+                        BinaryConfigurator.configureBinary(project, nativeProject, lib);
+                    } else {
+                        CppSharedLibrary lib = (CppSharedLibrary) binary;
+                        BinaryConfigurator.configureSharedLibraryBinary(project, nativeProject, lib);
+                        BinaryConfigurator.configureLibraryBinary(project, nativeProject, lib);
+                        BinaryConfigurator.configureBinary(project, nativeProject, lib);
+                    }
+                } else {
+                    CppExecutable executable = (CppExecutable) binary;
+                    BinaryConfigurator.configureExecutableBinary(project, nativeProject, executable);
+                    BinaryConfigurator.configureBinary(project, nativeProject, executable);
+                }
+            });
+
+            //Run compiler modifiers
             project.getTasks().withType(CppCompile.class).configureEach(c -> nativeProject.getCompilerMods().forEach(a -> a.execute(c)));
 
-            modifyBinaries(project, nativeProject);
         });
 
+        //Apply gradle native plugin
         project.getPluginManager().apply(getPluginType());
     }
 
-    private void modifyBinaries(Project project, NativeProjectExtension nativeProject) {
+    private void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
         SoftwareComponent component = project.getComponents().getAt("main");
         if (component instanceof ComponentWithBinaries) {
             ((ComponentWithBinaries) component).getBinaries().whenElementFinalized(softwareComponent -> {
                 if (softwareComponent instanceof CppBinary) {
                     CppBinary binary = (CppBinary) softwareComponent;
-                    if (isLibrary) {
-                        Linkage linkage = ((ConfigurableComponentWithLinkUsage) binary).getLinkage();
-                        if (linkage == Linkage.STATIC) {
-                            CppStaticLibrary lib = (CppStaticLibrary) binary;
-                            BinaryConfigurator.configureStaticLibraryBinary(project, nativeProject, lib);
-                            BinaryConfigurator.configureLibraryBinary(project, nativeProject, lib);
-                            BinaryConfigurator.configureBinary(project, nativeProject, lib);
-                        } else {
-                            CppSharedLibrary lib = (CppSharedLibrary) binary;
-                            BinaryConfigurator.configureSharedLibraryBinary(project, nativeProject, lib);
-                            BinaryConfigurator.configureLibraryBinary(project, nativeProject, lib);
-                            BinaryConfigurator.configureBinary(project, nativeProject, lib);
-                        }
-                    } else {
-                        CppExecutable executable = (CppExecutable) binary;
-                        BinaryConfigurator.configureExecutableBinary(project, nativeProject, executable);
-                        BinaryConfigurator.configureBinary(project, nativeProject, executable);
-                    }
+                    consumer.accept(binary);
                 }
             });
         }

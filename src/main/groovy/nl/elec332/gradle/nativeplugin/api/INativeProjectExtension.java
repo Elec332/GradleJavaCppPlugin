@@ -6,13 +6,22 @@ import org.gradle.api.provider.SetProperty;
 import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.nativeplatform.Linkage;
 
+/**
+ * Created by Elec332 on 28-12-2020
+ */
 public interface INativeProjectExtension {
 
     SetProperty<Linkage> getLinkage();
 
     Property<String> getCppVersion();
 
+    Property<String> getGeneratedHeaderFolder();
+
     Property<String> getBuildToolsInstallDir();
+
+    void checkIncludes(String header, String name);
+
+    void nativeDependencies(Action<? super INativeProjectDependencyHandler> action);
 
     void modifyCompiler(Action<? super CppCompile> action);
 
