@@ -1,49 +1,49 @@
-#ifndef TOREPLACE_EXPORT_H
-#define TOREPLACE_EXPORT_H
+#ifndef REPLACEME_EXPORT_H
+#define REPLACEME_EXPORT_H
 
-#ifdef TOREPLACE_STATIC_DEFINE
-#  define TOREPLACE_EXPORT
-#  define TOREPLACE_NO_EXPORT
+#ifdef REPLACEME_STATIC_DEFINE
+#  define REPLACEME_EXPORT
+#  define REPLACEME_NO_EXPORT
 #else
-#  ifndef TOREPLACE_EXPORT
-#    ifdef TOREPLACE_EXPORTS //We are building this library
-#      ifndef _MSC_VER
-#        define TOREPLACE_EXPORT __attribute__((visibility("default")))
+#  ifndef REPLACEME_EXPORT
+#    ifdef REPLACEME_CREATE_EXPORTS //We are building this library
+#      ifdef _MSC_VER
+#        define REPLACEME_EXPORT __declspec(dllexport)
 #      else
-#        define TOREPLACE_EXPORT __declspec(dllexport)
+#        define REPLACEME_EXPORT __attribute__((visibility("default")))
 #      endif
 #    else //We are using this library
-#      ifndef _MSC_VER
-#        define TOREPLACE_EXPORT __attribute__((visibility("default")))
+#      ifdef _MSC_VER
+#        define REPLACEME_EXPORT __declspec(dllimport)
 #      else
-#        define TOREPLACE_EXPORT __declspec(dllimport)
+#        define REPLACEME_EXPORT __attribute__((visibility("default")))
 #      endif
 #    endif
 #  endif
 
-#  ifndef TOREPLACE_NO_EXPORT
-#    ifndef _MSC_VER
-#      define TOREPLACE_NO_EXPORT __attribute__((visibility("hidden")))
+#  ifndef REPLACEME_NO_EXPORT
+#    ifdef _MSC_VER
+#      define REPLACEME_NO_EXPORT
 #    else
-#      define TOREPLACE_NO_EXPORT
+#      define REPLACEME_NO_EXPORT __attribute__((visibility("hidden")))
 #    endif
 #  endif
 #endif
 
-#ifndef TOREPLACE_DEPRECATED
-#  ifndef _MSC_VER
-#    define TOREPLACE_DEPRECATED __attribute__((__deprecated__))
+#ifndef REPLACEME_DEPRECATED
+#  ifdef _MSC_VER
+#    define REPLACEME_DEPRECATED __declspec(deprecated)
 #  else
-#    define TOREPLACE_DEPRECATED __declspec(deprecated)
+#    define REPLACEME_DEPRECATED __attribute__((__deprecated__))
 #  endif
 #endif
 
-#ifndef TOREPLACE_DEPRECATED_EXPORT
-#  define TOREPLACE_DEPRECATED_EXPORT TOREPLACE_EXPORT TOREPLACE_DEPRECATED
+#ifndef REPLACEME_DEPRECATED_EXPORT
+#  define REPLACEME_DEPRECATED_EXPORT REPLACEME_EXPORT REPLACEME_DEPRECATED
 #endif
 
-#ifndef TOREPLACE_DEPRECATED_NO_EXPORT
-#  define TOREPLACE_DEPRECATED_NO_EXPORT TOREPLACE_NO_EXPORT TOREPLACE_DEPRECATED
+#ifndef REPLACEME_DEPRECATED_NO_EXPORT
+#  define REPLACEME_DEPRECATED_NO_EXPORT REPLACEME_NO_EXPORT REPLACEME_DEPRECATED
 #endif
 
-#endif /* TOREPLACE_EXPORT_H */
+#endif /* REPLACEME_EXPORT_H */

@@ -64,9 +64,10 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
         });
 
         //Generate include header
+        HeaderGenerator.generateHeaders(generatedHeaders, nativeProject);
         nativeProject.modifyCompiler(compiler -> {
-            HeaderGenerator.generateHeaders(generatedHeaders, nativeProject);
             compiler.includes(generatedHeaders);
+            compiler.getCompilerArgs().add("-D" + nativeProject.getGeneratedHeaderSubFolder().get().toUpperCase(Locale.ROOT) + "_CREATE_EXPORTS");
         });
 
         project.afterEvaluate(p -> {

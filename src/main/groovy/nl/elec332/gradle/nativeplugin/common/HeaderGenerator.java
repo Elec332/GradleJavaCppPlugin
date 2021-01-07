@@ -39,7 +39,7 @@ public class HeaderGenerator {
         try {
             InputStream is = HeaderGenerator.class.getClassLoader().getResource("exportbase.h").openStream();
             new BufferedReader(new InputStreamReader(is)).lines().forEach(s -> {
-                GroovyHooks.inject(file, s.replace("TOREPLACE", extension.getGeneratedHeaderSubFolder().get().toUpperCase(Locale.ROOT)) + "\n");
+                GroovyHooks.inject(file, s.replace("REPLACEME", extension.getGeneratedHeaderSubFolder().get().toUpperCase(Locale.ROOT)) + "\n");
             });
         } catch (Exception e) {
             throw new RuntimeException(e);

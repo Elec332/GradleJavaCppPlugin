@@ -5,11 +5,8 @@ import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.SetProperty;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by Elec332 on 5-1-2021
@@ -23,9 +20,8 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
         winLink = new HashSet<>();
         linLink = new HashSet<>();
 
-        winInc.set(Stream.of("kernel", "user", "gdi", "shell", "ole", "oleaut", "comdlg", "advapi").map(s -> s + "32.lib").collect(Collectors.toSet()));
-        winInc.addAll(Arrays.asList("winspool.lib", "uuid.lib"));
-        linInc.set(Arrays.asList("-lstdc++fs", "-pthread", "-ldl"));
+        winInc.set(Constants.WINDOWS_INCLUDES);
+        linInc.set(Constants.LINUX_INCLUDES);
     }
 
     private final SetProperty<String> winInc;
