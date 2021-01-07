@@ -23,7 +23,7 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
         winLink = new HashSet<>();
         linLink = new HashSet<>();
 
-        winInc.set(Stream.of("kernel", "user", "gdi", "shell", "ole", "oleauth", "comdlg", "advapi").map(s -> s + "32.lib").collect(Collectors.toSet()));
+        winInc.set(Stream.of("kernel", "user", "gdi", "shell", "ole", "oleaut", "comdlg", "advapi").map(s -> s + "32.lib").collect(Collectors.toSet()));
         winInc.addAll(Arrays.asList("winspool.lib", "uuid.lib"));
         linInc.set(Arrays.asList("-lstdc++fs", "-pthread", "-ldl"));
     }

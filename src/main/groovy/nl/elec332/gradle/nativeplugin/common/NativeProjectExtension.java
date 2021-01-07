@@ -11,6 +11,7 @@ import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.nativeplatform.Linkage;
 
 import javax.inject.Inject;
+import java.io.File;
 import java.util.*;
 
 /**
@@ -19,7 +20,7 @@ import java.util.*;
 public class NativeProjectExtension implements INativeProjectExtension {
 
     @Inject
-    public NativeProjectExtension(ObjectFactory objectFactory, Project project) {
+    public NativeProjectExtension(ObjectFactory objectFactory, Project project, File file) {
         linkage = objectFactory.setProperty(Linkage.class);
         cppVersion = objectFactory.property(String.class);
         btInstDir = objectFactory.property(String.class);
@@ -28,10 +29,12 @@ public class NativeProjectExtension implements INativeProjectExtension {
         hIncCheckFound = new HashSet<>();
         ghf = objectFactory.property(String.class);
         depHandler = new NativeProjectDependencyHandler(objectFactory, project);
+        generatedHeaders = file;
 
         linkage.set(Collections.singletonList(Linkage.SHARED));
         btInstDir.set("");
         ghf.set(project.getName().trim().toLowerCase(Locale.ROOT));
+        cppVersion.set("c++14");
     }
 
     private final SetProperty<Linkage> linkage;
@@ -42,6 +45,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
     private final Set<String> hIncCheckFound;
     private final Property<String> ghf;
     private final NativeProjectDependencyHandler depHandler;
+    private final File generatedHeaders;
 
     @Override
     public SetProperty<Linkage> getLinkage() {
@@ -54,7 +58,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
     }
 
     @Override
-    public Property<String> getGeneratedHeaderFolder() {
+    public Property<String> getGeneratedHeaderSubFolder() {
         return ghf;
     }
 
@@ -95,4 +99,9 @@ public class NativeProjectExtension implements INativeProjectExtension {
     public NativeProjectDependencyHandler getDepHandler() {
         return depHandler;
     }
+
+    public File getGeneratedHeadersDir() {
+        return generatedHeaders;
+    }
+
 }

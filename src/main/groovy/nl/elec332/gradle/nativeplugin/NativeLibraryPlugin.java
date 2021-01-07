@@ -10,10 +10,6 @@ import javax.annotation.Nonnull;
  */
 public class NativeLibraryPlugin extends AbstractNativePlugin {
 
-    public NativeLibraryPlugin() {
-        super(true);
-    }
-
     @Nonnull
     @Override
     protected Class<?> getPluginType() {

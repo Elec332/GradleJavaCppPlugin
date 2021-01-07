@@ -9,7 +9,6 @@ import org.gradle.language.cpp.CppBinary;
 import org.gradle.language.cpp.CppExecutable;
 import org.gradle.language.cpp.CppSharedLibrary;
 import org.gradle.language.cpp.CppStaticLibrary;
-import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.language.nativeplatform.ComponentWithLinkUsage;
 import org.gradle.language.nativeplatform.ComponentWithRuntimeUsage;
 import org.gradle.nativeplatform.tasks.AbstractLinkTask;
@@ -18,7 +17,6 @@ import org.gradle.nativeplatform.tasks.CreateStaticLibrary;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -97,7 +95,7 @@ public class BinaryConfigurator {
                     found = true;
                 }
             }
-            if (found) {
+            if (!found) {
                 remove.add(s);
             }
         }

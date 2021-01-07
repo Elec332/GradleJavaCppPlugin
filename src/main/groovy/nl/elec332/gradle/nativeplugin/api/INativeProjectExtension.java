@@ -15,7 +15,7 @@ public interface INativeProjectExtension {
 
     Property<String> getCppVersion();
 
-    Property<String> getGeneratedHeaderFolder();
+    Property<String> getGeneratedHeaderSubFolder();
 
     Property<String> getBuildToolsInstallDir();
 

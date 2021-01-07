@@ -7,25 +7,16 @@ import nl.elec332.gradle.util.ProjectHelper;
 import nl.elec332.gradle.util.Utils;
 import org.gradle.api.*;
 import org.gradle.api.component.SoftwareComponent;
-import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
 import org.gradle.internal.os.OperatingSystem;
 import org.gradle.language.ComponentWithBinaries;
-import org.gradle.language.cpp.CppBinary;
-import org.gradle.language.cpp.CppExecutable;
-import org.gradle.language.cpp.CppSharedLibrary;
-import org.gradle.language.cpp.CppStaticLibrary;
-import org.gradle.language.cpp.internal.DefaultCppLibrary;
+import org.gradle.language.cpp.*;
 import org.gradle.language.cpp.tasks.CppCompile;
-import org.gradle.language.internal.NativeComponentFactory;
 import org.gradle.language.nativeplatform.internal.ConfigurableComponentWithLinkUsage;
-import org.gradle.language.nativeplatform.internal.toolchains.ToolChainSelector;
 import org.gradle.nativeplatform.Linkage;
-import org.gradle.nativeplatform.TargetMachineFactory;
 import org.gradle.nativeplatform.platform.NativePlatform;
 import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.util.Collections;
 import java.util.Locale;
@@ -37,24 +28,20 @@ import java.util.function.Consumer;
 @NonNullApi
 public abstract class AbstractNativePlugin implements Plugin<Project> {
 
-    public AbstractNativePlugin(boolean isLibrary) {
-        this.isLibrary = isLibrary;
-    }
-
     public static final String HEADERS = "headers";
     public static final String WINDOWS_HEADERS = "windowsHeaders";
     public static final String STATIC_LINKER = "staticLinker";
     public static final String LINKER = "linker";
     public static final String DYNAMIC = "dynamic";
 
-    private final boolean isLibrary;
     private static final OperatingSystem os = OperatingSystem.current();
 
     @Override
     @SuppressWarnings("UnstableApiUsage")
     public void apply(Project project) {
         PluginHelper.checkMinimumGradleVersion("6.0");
-        NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project);
+        File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
+        NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project, generatedHeaders);
 
         project.getConfigurations().create(HEADERS);
         project.getConfigurations().create(WINDOWS_HEADERS);
@@ -62,10 +49,8 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
         project.getConfigurations().create(LINKER);
         project.getConfigurations().create(DYNAMIC);
 
-        File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
         project.getExtensions().add("includedDeps", "");
         project.getExtensions().add("excludedDeps", "");
-        System.out.println(generatedHeaders);
 
         //Set C++ version
         nativeProject.modifyCompiler(compiler -> {
@@ -80,7 +65,7 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
 
         //Generate include header
         nativeProject.modifyCompiler(compiler -> {
-            HeaderGenerator.generateHeaders(project, generatedHeaders, nativeProject);
+            HeaderGenerator.generateHeaders(generatedHeaders, nativeProject);
             compiler.includes(generatedHeaders);
         });
 
@@ -95,16 +80,21 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
                 );
             }
 
-            //Set linkage and add generated headers to output products
-            if (isLibrary) {
-                DefaultCppLibrary libSettings = (DefaultCppLibrary) project.getExtensions().getByName("library");
-                libSettings.getLinkage().set(nativeProject.getLinkage());
-                libSettings.getApiElements().getOutgoing().artifact(generatedHeaders);
-            }
+            project.getComponents().forEach(softwareComponent -> {
+                if (softwareComponent instanceof CppComponent) {
+                    if (softwareComponent instanceof CppLibrary) {
+                        ComponentConfigurator.configureComponent(project, nativeProject, (CppLibrary) softwareComponent);
+                        ComponentConfigurator.configureLibrary(project, nativeProject, (CppLibrary) softwareComponent);
+                    } else if (softwareComponent instanceof CppApplication) {
+                        ComponentConfigurator.configureComponent(project, nativeProject, (CppApplication) softwareComponent);
+                        ComponentConfigurator.configureExecutable(project, nativeProject, (CppApplication) softwareComponent);
+                    } // No need to alter CppTestSuite (yet)
+                }
+            });
 
             //Run binary modifiers
             modifyBinaries(project, binary -> {
-                if (isLibrary) {
+                if (binary instanceof ConfigurableComponentWithLinkUsage) {
                     Linkage linkage = ((ConfigurableComponentWithLinkUsage) binary).getLinkage();
                     if (linkage == Linkage.STATIC) {
                         CppStaticLibrary lib = (CppStaticLibrary) binary;
