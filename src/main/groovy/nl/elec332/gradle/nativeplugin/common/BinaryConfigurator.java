@@ -25,24 +25,25 @@ import java.util.Set;
 @SuppressWarnings("UnstableApiUsage")
 public class BinaryConfigurator {
 
-    static <B extends CppBinary & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configureBinary(Project project, NativeProjectExtension nativeProject, B binary) {
+    static <B extends CppBinary & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configureBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
         mergeConfigurations(project, binary);
         checkIncludes(nativeProject, binary);
     }
 
-    static void configureExecutableBinary(Project project, NativeProjectExtension nativeProject, CppExecutable binary) {
+    static void configureExecutableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppExecutable binary) {
         addDependencies(binary, binary.getLinkTask().get(), nativeProject);
     }
 
-    static<B extends CppBinary & ComponentWithLinkUsage & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configureLibraryBinary(Project project, NativeProjectExtension nativeProject, B binary) {
-
+    static<B extends CppBinary & ComponentWithLinkUsage & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configureLibraryBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
+        //helper.modifyAttributes(((DefaultCppBinary) binary).getIdentity().getRuntimeUsageContext(), AbstractNativePlugin.SMALL_ATTRIBUTE, true);
+        //helper.modifyAttributes(((DefaultCppBinary) binary).getIdentity().getLinkUsageContext(), AbstractNativePlugin.SMALL_ATTRIBUTE, true);
     }
 
-    static void configureSharedLibraryBinary(Project project, NativeProjectExtension nativeProject, CppSharedLibrary binary) {
+    static void configureSharedLibraryBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppSharedLibrary binary) {
         addDependencies(binary, binary.getLinkTask().get(), nativeProject);
     }
 
-    static void configureStaticLibraryBinary(Project project, NativeProjectExtension nativeProject, CppStaticLibrary binary) {
+    static void configureStaticLibraryBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppStaticLibrary binary) {
         mergeStaticLibraries(project, binary);
     }
 

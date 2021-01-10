@@ -36,7 +36,7 @@ public class LinuxHelper {
                     spec.commandLine("ar", "-M");
                 });
                 if (!project.file(movedFile).delete()) {
-                    System.out.println(" Failed to delete: " + movedFile);
+                    System.out.println("Failed to delete: " + movedFile);
                 }
             });
         });

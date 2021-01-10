@@ -5,21 +5,21 @@ import nl.elec332.gradle.util.GroovyHooks;
 import nl.elec332.gradle.util.PluginHelper;
 import nl.elec332.gradle.util.ProjectHelper;
 import nl.elec332.gradle.util.Utils;
-import org.gradle.api.*;
+import org.gradle.api.NonNullApi;
+import org.gradle.api.Plugin;
+import org.gradle.api.Project;
+import org.gradle.api.attributes.Attribute;
 import org.gradle.api.component.SoftwareComponent;
-import org.gradle.internal.os.OperatingSystem;
 import org.gradle.language.ComponentWithBinaries;
 import org.gradle.language.cpp.*;
 import org.gradle.language.cpp.tasks.CppCompile;
-import org.gradle.language.nativeplatform.internal.ConfigurableComponentWithLinkUsage;
-import org.gradle.nativeplatform.Linkage;
-import org.gradle.nativeplatform.platform.NativePlatform;
-import org.gradle.nativeplatform.platform.internal.OperatingSystemInternal;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -34,7 +34,7 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
     public static final String LINKER = "linker";
     public static final String DYNAMIC = "dynamic";
 
-    private static final OperatingSystem os = OperatingSystem.current();
+    public static final Attribute<Boolean> SMALL_ATTRIBUTE = Attribute.of("small", Boolean.class);
 
     @Override
     @SuppressWarnings("UnstableApiUsage")
@@ -49,8 +49,12 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
         project.getConfigurations().create(LINKER);
         project.getConfigurations().create(DYNAMIC);
 
+        project.getDependencies().getAttributesSchema().attribute(SMALL_ATTRIBUTE);
+
         project.getExtensions().add("includedDeps", "");
         project.getExtensions().add("excludedDeps", "");
+
+        InternalHelper helper = project.getObjects().newInstance(InternalHelper.class);
 
         //Set C++ version
         nativeProject.modifyCompiler(compiler -> {
@@ -70,10 +74,11 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
             compiler.getCompilerArgs().add("-D" + nativeProject.getGeneratedHeaderSubFolder().get().toUpperCase(Locale.ROOT) + "_CREATE_EXPORTS");
         });
 
+        Set<Runnable> callbacks = new HashSet<>();
         project.afterEvaluate(p -> {
 
             //Set VC BuildTools install dir
-            if (os.isWindows() && !Utils.isNullOrEmpty(nativeProject.getBuildToolsInstallDir().get())) {
+            if (Utils.isWindows() && !Utils.isNullOrEmpty(nativeProject.getBuildToolsInstallDir().get())) {
                 GroovyHooks.configureToolchains(project, nativeToolChains ->
                         nativeToolChains.create("visualCppBT", VisualCpp.class, tc ->
                                 tc.setInstallDir(nativeProject.getBuildToolsInstallDir().get())
@@ -83,35 +88,33 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
 
             project.getComponents().forEach(softwareComponent -> {
                 if (softwareComponent instanceof CppComponent) {
+                    ComponentConfigurator.configureComponent(project, nativeProject, (CppComponent) softwareComponent, callbacks::add);
                     if (softwareComponent instanceof CppLibrary) {
-                        ComponentConfigurator.configureComponent(project, nativeProject, (CppLibrary) softwareComponent);
-                        ComponentConfigurator.configureLibrary(project, nativeProject, (CppLibrary) softwareComponent);
+                        ComponentConfigurator.configureLibrary(project, helper, nativeProject, (CppLibrary) softwareComponent, callbacks::add);
                     } else if (softwareComponent instanceof CppApplication) {
-                        ComponentConfigurator.configureComponent(project, nativeProject, (CppApplication) softwareComponent);
-                        ComponentConfigurator.configureExecutable(project, nativeProject, (CppApplication) softwareComponent);
+                        ComponentConfigurator.configureExecutable(project, helper, nativeProject, (CppApplication) softwareComponent, callbacks::add);
                     } // No need to alter CppTestSuite (yet)
                 }
             });
 
             //Run binary modifiers
             modifyBinaries(project, binary -> {
-                if (binary instanceof ConfigurableComponentWithLinkUsage) {
-                    Linkage linkage = ((ConfigurableComponentWithLinkUsage) binary).getLinkage();
-                    if (linkage == Linkage.STATIC) {
-                        CppStaticLibrary lib = (CppStaticLibrary) binary;
-                        BinaryConfigurator.configureStaticLibraryBinary(project, nativeProject, lib);
-                        BinaryConfigurator.configureLibraryBinary(project, nativeProject, lib);
-                        BinaryConfigurator.configureBinary(project, nativeProject, lib);
-                    } else {
-                        CppSharedLibrary lib = (CppSharedLibrary) binary;
-                        BinaryConfigurator.configureSharedLibraryBinary(project, nativeProject, lib);
-                        BinaryConfigurator.configureLibraryBinary(project, nativeProject, lib);
-                        BinaryConfigurator.configureBinary(project, nativeProject, lib);
-                    }
-                } else {
+                if (binary instanceof CppStaticLibrary) {
+                    CppStaticLibrary lib = (CppStaticLibrary) binary;
+                    BinaryConfigurator.configureStaticLibraryBinary(project, helper, nativeProject, lib);
+                    BinaryConfigurator.configureLibraryBinary(project, helper, nativeProject, lib);
+                    BinaryConfigurator.configureBinary(project, helper, nativeProject, lib);
+                } else if (binary instanceof CppSharedLibrary){
+                    CppSharedLibrary lib = (CppSharedLibrary) binary;
+                    BinaryConfigurator.configureSharedLibraryBinary(project, helper, nativeProject, lib);
+                    BinaryConfigurator.configureLibraryBinary(project, helper, nativeProject, lib);
+                    BinaryConfigurator.configureBinary(project, helper, nativeProject, lib);
+                } else if(binary instanceof CppExecutable) {
                     CppExecutable executable = (CppExecutable) binary;
-                    BinaryConfigurator.configureExecutableBinary(project, nativeProject, executable);
-                    BinaryConfigurator.configureBinary(project, nativeProject, executable);
+                    BinaryConfigurator.configureExecutableBinary(project, helper, nativeProject, executable);
+                    BinaryConfigurator.configureBinary(project, helper, nativeProject, executable);
+                } else {
+                    throw new UnsupportedOperationException("Unknown library type: " + binary.getClass());
                 }
             });
 
@@ -122,6 +125,10 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
 
         //Apply gradle native plugin
         project.getPluginManager().apply(getPluginType());
+
+        project.afterEvaluate(p -> {
+            callbacks.forEach(Runnable::run);
+        });
     }
 
     private void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
@@ -134,10 +141,6 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
                 }
             });
         }
-    }
-
-    public static org.gradle.internal.os.OperatingSystem getOperatingSystemInfo(NativePlatform platform) {
-        return ((OperatingSystemInternal) platform.getOperatingSystem()).getInternalOs();
     }
 
     protected abstract Class<?> getPluginType();
