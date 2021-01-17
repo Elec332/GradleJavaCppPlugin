@@ -9,10 +9,10 @@ import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.attributes.Attribute;
-import org.gradle.api.component.SoftwareComponent;
 import org.gradle.language.ComponentWithBinaries;
 import org.gradle.language.cpp.*;
 import org.gradle.language.cpp.tasks.CppCompile;
+import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
 import java.io.File;
@@ -79,11 +79,14 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
 
             //Set VC BuildTools install dir
             if (Utils.isWindows() && !Utils.isNullOrEmpty(nativeProject.getBuildToolsInstallDir().get())) {
-                GroovyHooks.configureToolchains(project, nativeToolChains ->
+                GroovyHooks.configureToolchains(project, nativeToolChains -> {
+                    if (nativeToolChains.isEmpty()) {
+                        System.out.println("No toolchains were detected by Gradle, applying VCBT settings...");
                         nativeToolChains.create("visualCppBT", VisualCpp.class, tc ->
                                 tc.setInstallDir(nativeProject.getBuildToolsInstallDir().get())
-                        )
-                );
+                        );
+                    }
+                });
             }
 
             project.getComponents().forEach(softwareComponent -> {
@@ -99,21 +102,22 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
 
             //Run binary modifiers
             modifyBinaries(project, binary -> {
+                BinaryConfigurator.configureBinary(project, helper, nativeProject, binary);
                 if (binary instanceof CppStaticLibrary) {
                     CppStaticLibrary lib = (CppStaticLibrary) binary;
                     BinaryConfigurator.configureStaticLibraryBinary(project, helper, nativeProject, lib);
                     BinaryConfigurator.configureLibraryBinary(project, helper, nativeProject, lib);
-                    BinaryConfigurator.configureBinary(project, helper, nativeProject, lib);
+                    BinaryConfigurator.configurePublishableBinary(project, helper, nativeProject, lib);
                 } else if (binary instanceof CppSharedLibrary){
                     CppSharedLibrary lib = (CppSharedLibrary) binary;
                     BinaryConfigurator.configureSharedLibraryBinary(project, helper, nativeProject, lib);
                     BinaryConfigurator.configureLibraryBinary(project, helper, nativeProject, lib);
-                    BinaryConfigurator.configureBinary(project, helper, nativeProject, lib);
+                    BinaryConfigurator.configurePublishableBinary(project, helper, nativeProject, lib);
                 } else if(binary instanceof CppExecutable) {
                     CppExecutable executable = (CppExecutable) binary;
                     BinaryConfigurator.configureExecutableBinary(project, helper, nativeProject, executable);
-                    BinaryConfigurator.configureBinary(project, helper, nativeProject, executable);
-                } else {
+                    BinaryConfigurator.configurePublishableBinary(project, helper, nativeProject, executable);
+                } else if (!(binary instanceof CppTestExecutable)){
                     throw new UnsupportedOperationException("Unknown library type: " + binary.getClass());
                 }
             });
@@ -126,21 +130,20 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
         //Apply gradle native plugin
         project.getPluginManager().apply(getPluginType());
 
-        project.afterEvaluate(p -> {
-            callbacks.forEach(Runnable::run);
-        });
+        project.afterEvaluate(p -> callbacks.forEach(Runnable::run));
     }
 
     private void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
-        SoftwareComponent component = project.getComponents().getAt("main");
-        if (component instanceof ComponentWithBinaries) {
-            ((ComponentWithBinaries) component).getBinaries().whenElementFinalized(softwareComponent -> {
-                if (softwareComponent instanceof CppBinary) {
-                    CppBinary binary = (CppBinary) softwareComponent;
-                    consumer.accept(binary);
-                }
-            });
-        }
+        project.getComponents().forEach(component -> {
+            if (component instanceof ComponentWithBinaries) {
+                ((ComponentWithBinaries) component).getBinaries().whenElementFinalized(softwareComponent -> {
+                    if (softwareComponent instanceof CppBinary) {
+                        CppBinary binary = (CppBinary) softwareComponent;
+                        consumer.accept(binary);
+                    }
+                });
+            }
+        });
     }
 
     protected abstract Class<?> getPluginType();

@@ -25,9 +25,13 @@ import java.util.Set;
 @SuppressWarnings("UnstableApiUsage")
 public class BinaryConfigurator {
 
-    static <B extends CppBinary & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configureBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
+    static void configureBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppBinary binary) {
         mergeConfigurations(project, binary);
         checkIncludes(nativeProject, binary);
+        mergeStaticLibraries(project, binary);
+    }
+
+    static <B extends CppBinary & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configurePublishableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
     }
 
     static void configureExecutableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppExecutable binary) {
@@ -44,7 +48,6 @@ public class BinaryConfigurator {
     }
 
     static void configureStaticLibraryBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppStaticLibrary binary) {
-        mergeStaticLibraries(project, binary);
     }
 
     /////////////////////////////////////////////////////////////////
@@ -63,12 +66,17 @@ public class BinaryConfigurator {
         }
     }
 
-    private static void mergeStaticLibraries(Project project, CppStaticLibrary binary) {
-        Set<File> deps = project.getConfigurations().getAt(AbstractNativePlugin.STATIC_LINKER).resolve();
-        if (binary.getTargetPlatform().getTargetMachine().getOperatingSystemFamily().isWindows()) {
-            deps.forEach(file -> ((CreateStaticLibrary) binary.getLinkFileProducer().get()).source(project.files(file)));
+    private static void mergeStaticLibraries(Project project, CppBinary binary) {
+        Configuration staticConfig = project.getConfigurations().getAt(AbstractNativePlugin.STATIC_LINKER);
+        if (binary instanceof CppStaticLibrary) {
+            Set<File> deps = staticConfig.resolve();
+            if (binary.getTargetPlatform().getTargetMachine().getOperatingSystemFamily().isWindows()) {
+                deps.forEach(file -> ((CreateStaticLibrary) ((CppStaticLibrary) binary).getLinkFileProducer().get()).source(project.files(file)));
+            } else {
+                ((CppStaticLibrary) binary).getCreateTask().get().finalizedBy(LinuxHelper.createStaticMergeTask(project, binary, ((CppStaticLibrary) binary).getLinkFile().get().getAsFile(), deps.stream().map(File::getAbsolutePath).toArray(String[]::new)));
+            }
         } else {
-            binary.getCreateTask().get().finalizedBy(LinuxHelper.createStaticMergeTask(project, binary, binary.getLinkFile().get().getAsFile(), deps.stream().map(File::getAbsolutePath).toArray(String[]::new)));
+            ((Configuration) binary.getLinkLibraries()).extendsFrom(staticConfig);
         }
     }
 
