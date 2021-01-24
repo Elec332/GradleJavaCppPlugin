@@ -21,7 +21,7 @@ public interface INativeProjectExtension {
 
     void checkIncludes(String header, String name);
 
-    void nativeDependencies(Action<? super INativeProjectDependencyHandler> action);
+    void dependencies(Action<? super INativeProjectDependencyHandler> action);
 
     void modifyCompiler(Action<? super CppCompile> action);
 

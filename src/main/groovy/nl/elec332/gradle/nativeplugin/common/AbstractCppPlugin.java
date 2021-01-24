@@ -26,11 +26,12 @@ import java.util.function.Consumer;
  * Created by Elec332 on 6-11-2020
  */
 @NonNullApi
-public abstract class AbstractNativePlugin implements Plugin<Project> {
+public abstract class AbstractCppPlugin implements Plugin<Project> {
 
     public static final String HEADERS = "headers";
     public static final String WINDOWS_HEADERS = "windowsHeaders";
     public static final String STATIC_LINKER = "staticLinker";
+
     public static final String LINKER = "linker";
     public static final String DYNAMIC = "dynamic";
 
@@ -39,7 +40,7 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
     @Override
     @SuppressWarnings("UnstableApiUsage")
     public void apply(Project project) {
-        PluginHelper.checkMinimumGradleVersion("6.0");
+        PluginHelper.checkMinimumGradleVersion(Constants.GRADLE_VERSION);
         File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
         NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project, generatedHeaders);
 
@@ -66,9 +67,6 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
                 }
             }));
         });
-
-        //Generate include header
-        HeaderGenerator.generateHeaders(generatedHeaders, nativeProject);
         nativeProject.modifyCompiler(compiler -> {
             compiler.includes(generatedHeaders);
             compiler.getCompilerArgs().add("-D" + nativeProject.getGeneratedHeaderSubFolder().get().toUpperCase(Locale.ROOT) + "_CREATE_EXPORTS");
@@ -77,9 +75,11 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
         Set<Runnable> callbacks = new HashSet<>();
         project.afterEvaluate(p -> {
 
-            //Set VC BuildTools install dir
+            //Generate include header
+            HeaderGenerator.generateHeaders(generatedHeaders, nativeProject);
+
             if (Utils.isWindows() && !Utils.isNullOrEmpty(nativeProject.getBuildToolsInstallDir().get())) {
-                GroovyHooks.configureToolchains(project, nativeToolChains -> {
+                GroovyHooks.configureToolChains(project, nativeToolChains -> {
                     if (nativeToolChains.isEmpty()) {
                         System.out.println("No toolchains were detected by Gradle, applying VCBT settings...");
                         nativeToolChains.create("visualCppBT", VisualCpp.class, tc ->
@@ -113,11 +113,16 @@ public abstract class AbstractNativePlugin implements Plugin<Project> {
                     BinaryConfigurator.configureSharedLibraryBinary(project, helper, nativeProject, lib);
                     BinaryConfigurator.configureLibraryBinary(project, helper, nativeProject, lib);
                     BinaryConfigurator.configurePublishableBinary(project, helper, nativeProject, lib);
-                } else if(binary instanceof CppExecutable) {
+                } else if (binary instanceof CppExecutable) {
                     CppExecutable executable = (CppExecutable) binary;
+                    BinaryConfigurator.configurePublishableExecutableBinary(project, helper, nativeProject, executable);
                     BinaryConfigurator.configureExecutableBinary(project, helper, nativeProject, executable);
                     BinaryConfigurator.configurePublishableBinary(project, helper, nativeProject, executable);
-                } else if (!(binary instanceof CppTestExecutable)){
+                } else if (binary instanceof CppTestExecutable){
+                    CppTestExecutable executable = (CppTestExecutable) binary;
+                    BinaryConfigurator.configureTestExecutableBinary(project, helper, nativeProject, executable);
+                    BinaryConfigurator.configureExecutableBinary(project, helper, nativeProject, executable);
+                } else {
                     throw new UnsupportedOperationException("Unknown library type: " + binary.getClass());
                 }
             });

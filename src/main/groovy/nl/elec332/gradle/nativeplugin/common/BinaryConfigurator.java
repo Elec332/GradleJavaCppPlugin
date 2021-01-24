@@ -9,10 +9,13 @@ import org.gradle.language.cpp.CppBinary;
 import org.gradle.language.cpp.CppExecutable;
 import org.gradle.language.cpp.CppSharedLibrary;
 import org.gradle.language.cpp.CppStaticLibrary;
+import org.gradle.language.nativeplatform.ComponentWithExecutable;
+import org.gradle.language.nativeplatform.ComponentWithInstallation;
 import org.gradle.language.nativeplatform.ComponentWithLinkUsage;
 import org.gradle.language.nativeplatform.ComponentWithRuntimeUsage;
 import org.gradle.nativeplatform.tasks.AbstractLinkTask;
 import org.gradle.nativeplatform.tasks.CreateStaticLibrary;
+import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
 
 import java.io.File;
 import java.util.HashSet;
@@ -34,8 +37,14 @@ public class BinaryConfigurator {
     static <B extends CppBinary & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configurePublishableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
     }
 
-    static void configureExecutableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppExecutable binary) {
+    static <B extends CppBinary & ComponentWithExecutable & ComponentWithInstallation> void configureExecutableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
         addDependencies(binary, binary.getLinkTask().get(), nativeProject);
+    }
+
+    static void configurePublishableExecutableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppExecutable binary) {
+    }
+
+    static void configureTestExecutableBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, CppTestExecutable binary) {
     }
 
     static<B extends CppBinary & ComponentWithLinkUsage & ComponentWithOutputs & ComponentWithRuntimeUsage & PublishableComponent> void configureLibraryBinary(Project project, InternalHelper helper, NativeProjectExtension nativeProject, B binary) {
@@ -67,7 +76,7 @@ public class BinaryConfigurator {
     }
 
     private static void mergeStaticLibraries(Project project, CppBinary binary) {
-        Configuration staticConfig = project.getConfigurations().getAt(AbstractNativePlugin.STATIC_LINKER);
+        Configuration staticConfig = project.getConfigurations().getAt(AbstractCppPlugin.STATIC_LINKER);
         if (binary instanceof CppStaticLibrary) {
             Set<File> deps = staticConfig.resolve();
             if (binary.getTargetPlatform().getTargetMachine().getOperatingSystemFamily().isWindows()) {
@@ -81,16 +90,19 @@ public class BinaryConfigurator {
     }
 
     private static void mergeConfigurations(Project project, CppBinary binary) {
-        ((Configuration) binary.getLinkLibraries()).extendsFrom(project.getConfigurations().getByName(AbstractNativePlugin.LINKER));
-        ((Configuration) binary.getRuntimeLibraries()).extendsFrom(project.getConfigurations().getByName(AbstractNativePlugin.DYNAMIC));
+        ((Configuration) binary.getLinkLibraries()).extendsFrom(project.getConfigurations().getByName(AbstractCppPlugin.LINKER));
+        ((Configuration) binary.getRuntimeLibraries()).extendsFrom(project.getConfigurations().getByName(AbstractCppPlugin.DYNAMIC));
 
-        binary.getCompileTask().get().includes(project.getConfigurations().getByName(AbstractNativePlugin.HEADERS));
+        binary.getCompileTask().get().includes(project.getConfigurations().getByName(AbstractCppPlugin.HEADERS));
         if (binary.getTargetPlatform().getTargetMachine().getOperatingSystemFamily().isWindows()) {
-            binary.getCompileTask().get().includes(project.getConfigurations().getByName(AbstractNativePlugin.WINDOWS_HEADERS));
+            binary.getCompileTask().get().includes(project.getConfigurations().getByName(AbstractCppPlugin.WINDOWS_HEADERS));
         }
     }
 
     private static void checkIncludes(NativeProjectExtension nativeProject, CppBinary binary) {
+        if (nativeProject.getHeadersFound().isEmpty()) {
+            return;
+        }
         Set<File> all = new HashSet<>();
         binary.getCompileTask().get().getIncludes().forEach(all::add);
         binary.getCompileTask().get().getSystemIncludes().forEach(all::add);

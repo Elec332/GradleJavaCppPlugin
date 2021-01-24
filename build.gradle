@@ -16,16 +16,28 @@ dependencies {
 gradlePlugin {
 
     plugins {
-        nativeApplicationPlugin {
-            id = 'nl.elec332.gradle.nativeapplicationplugin'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.NativeApplicationPlugin'
+        cppApplicationPlugin {
+            id = 'nl.elec332.gradle.cppapplication'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.CppApplicationPlugin'
             displayName = 'Gradle Native Application Development Plugin'
             description = "A Gradle plugin to simplify application development of C and C++"
         }
-        nativeLibraryPlugin {
-            id = 'nl.elec332.gradle.nativelibraryplugin'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.NativeLibraryPlugin'
+        cppLibraryPlugin {
+            id = 'nl.elec332.gradle.cpplibrary'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.CppLibraryPlugin'
             displayName = 'Gradle Native Library Development Plugin'
+            description = "A Gradle plugin to simplify library development of C and C++"
+        }
+        cppTestPlugin {
+            id = 'nl.elec332.gradle.cpptest'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.CppTestPlugin'
+            displayName = 'Gradle Native Tests Plugin'
+            description = "A Gradle plugin to simplify library development of C and C++"
+        }
+        cmakePlugin {
+            id = 'nl.elec332.gradle.cmake'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.CMakeProjectPlugin'
+            displayName = 'Gradle CMake Project Plugin'
             description = "A Gradle plugin to simplify library development of C and C++"
         }
     }

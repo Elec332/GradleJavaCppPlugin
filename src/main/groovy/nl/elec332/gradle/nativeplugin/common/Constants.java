@@ -1,5 +1,6 @@
 package nl.elec332.gradle.nativeplugin.common;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -11,7 +12,14 @@ import java.util.stream.Stream;
  */
 public class Constants {
 
+    public static final String GRADLE_VERSION = "6.0";
     public static final Collection<String> WINDOWS_INCLUDES, LINUX_INCLUDES;
+
+    public static final String CMAKE_RELEASE_CONFIG = "Release";
+    public static final String CMAKE_DEBUG_CONFIG = "Debug";
+    public static final String DEFAULT_INCLUDE_FOLDER = "include";
+
+    public static final File NULL_FILE = new File("NULL_FILE_OBJ");
 
     static {
         WINDOWS_INCLUDES = Collections.unmodifiableSet(Stream.concat(
