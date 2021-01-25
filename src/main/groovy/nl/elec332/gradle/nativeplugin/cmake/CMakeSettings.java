@@ -10,7 +10,9 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.provider.SetProperty;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import java.io.File;
 
@@ -35,8 +37,12 @@ class CMakeSettings implements ICMakeSettings {
         this.varProps = objectFactory.mapProperty(String.class, String.class);
         this.linker = objectFactory.fileCollection();
         this.dynamic = objectFactory.fileCollection();
+        this.linkerDebug = objectFactory.fileCollection();
+        this.dynamicDebug = objectFactory.fileCollection();
         this.buildSharedLibs = objectFactory.property(Boolean.class);
         this.buildStaticLibs = objectFactory.property(Boolean.class);
+        this.linkerInclude = objectFactory.setProperty(String.class);
+        this.runtimeInclude = objectFactory.setProperty(String.class);
 
         if (projDir != Constants.NULL_FILE) {
             this.projectDirectory.set(projDir);
@@ -45,6 +51,7 @@ class CMakeSettings implements ICMakeSettings {
         this.buildDir.set(buildDir);
         this.buildConfigR.set(Constants.CMAKE_RELEASE_CONFIG);
         this.buildConfigD.set(Constants.CMAKE_DEBUG_CONFIG);
+
     }
 
     private final String name;
@@ -58,6 +65,10 @@ class CMakeSettings implements ICMakeSettings {
     private final MapProperty<String, String> varProps;
     private final ConfigurableFileCollection linker;
     private final ConfigurableFileCollection dynamic;
+    private final ConfigurableFileCollection linkerDebug;
+    private final ConfigurableFileCollection dynamicDebug;
+    private final SetProperty<String> linkerInclude;
+    private final SetProperty<String> runtimeInclude;
     private final Property<Boolean> buildSharedLibs;
     private final Property<Boolean> buildStaticLibs;
 
@@ -102,25 +113,56 @@ class CMakeSettings implements ICMakeSettings {
     }
 
     @Override
-    public ConfigurableFileCollection getLinkerBinaries() {
+    public SetProperty<String> getLinkerBinaries() {
+        return this.linkerInclude;
+    }
+
+    @Override
+    public SetProperty<String> getRuntimeBinaries() {
+        return this.runtimeInclude;
+    }
+
+    @Override
+    public ConfigurableFileCollection getReleaseLinkerBinaries() {
         return this.linker;
     }
 
     @Override
-    public ConfigurableFileCollection getRuntimeLibraries() {
+    public ConfigurableFileCollection getReleaseRuntimeBinaries() {
         return this.dynamic;
     }
 
     @Override
-    public void linkerBinaries(Action<? super ConfigurableFileCollection> action) {
+    public ConfigurableFileCollection getDebugLinkerBinaries() {
+        return this.linkerDebug;
+    }
+
+    @Override
+    public ConfigurableFileCollection getDebugRuntimeBinaries() {
+        return this.dynamicDebug;
+    }
+
+    @Override
+    public void releaseLinkerBinaries(Action<? super ConfigurableFileCollection> action) {
         action.execute(this.linker);
     }
 
     @Override
-    public void runtimeLibraries(Action<? super ConfigurableFileCollection> action) {
+    public void releaseRuntimeBinaries(Action<? super ConfigurableFileCollection> action) {
         action.execute(this.dynamic);
     }
 
+    @Override
+    public void debugLinkerBinaries(Action<? super ConfigurableFileCollection> action) {
+        action.execute(this.linkerDebug);
+    }
+
+    @Override
+    public void debugRuntimeBinaries(Action<? super ConfigurableFileCollection> action) {
+        action.execute(this.dynamicDebug);
+    }
+
+    @Nonnull
     @Override
     public String getName() {
         return name;

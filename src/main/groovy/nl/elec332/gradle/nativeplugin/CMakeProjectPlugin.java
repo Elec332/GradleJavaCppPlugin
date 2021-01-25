@@ -11,43 +11,17 @@ import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ModuleVersionIdentifier;
-import org.gradle.api.attributes.AttributeContainer;
 import org.gradle.api.attributes.Usage;
-import org.gradle.api.component.PublishableComponent;
 import org.gradle.api.internal.artifacts.ArtifactAttributes;
-import org.gradle.api.internal.artifacts.DefaultModuleVersionIdentifier;
-import org.gradle.api.internal.artifacts.publish.ArchivePublishArtifact;
-import org.gradle.api.internal.artifacts.transform.UnzipTransform;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
-import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
-import org.gradle.api.internal.component.SoftwareComponentInternal;
-import org.gradle.api.internal.component.UsageContext;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.TaskProvider;
-import org.gradle.api.tasks.bundling.Zip;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.language.cpp.CppBinary;
-import org.gradle.language.cpp.internal.DefaultUsageContext;
-import org.gradle.language.cpp.internal.MainLibraryVariant;
 import org.gradle.language.cpp.plugins.CppBasePlugin;
-import org.gradle.language.nativeplatform.internal.PublicationAwareComponent;
-import org.gradle.language.plugins.NativeBasePlugin;
 import org.gradle.language.swift.plugins.SwiftBasePlugin;
-import org.gradle.nativeplatform.Linkage;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 import org.gradle.nativeplatform.toolchain.internal.plugins.StandardToolChainsPlugin;
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
-
 import static org.gradle.api.artifacts.type.ArtifactTypeDefinition.DIRECTORY_TYPE;
-import static org.gradle.api.artifacts.type.ArtifactTypeDefinition.ZIP_TYPE;
-import static org.gradle.language.cpp.CppBinary.LINKAGE_ATTRIBUTE;
 
 /**
  * Created by Elec332 on 1/24/2021
@@ -55,13 +29,6 @@ import static org.gradle.language.cpp.CppBinary.LINKAGE_ATTRIBUTE;
 @NonNullApi
 @SuppressWarnings("UnstableApiUsage")
 public class CMakeProjectPlugin implements Plugin<Project> {
-
-    @Inject
-    public CMakeProjectPlugin(ImmutableAttributesFactory attributesFactory) {
-        this.attributesFactory = attributesFactory;
-    }
-
-    private final ImmutableAttributesFactory attributesFactory;
 
     @Override
     public void apply(Project project) {
@@ -122,7 +89,7 @@ public class CMakeProjectPlugin implements Plugin<Project> {
             it.getAttributes().attribute(CppBinary.OPTIMIZED_ATTRIBUTE, true);
         });
 
-        project.getExtensions().findByType(ExtraPropertiesExtension.class).set("buildToolsInstallDir", null);
+        project.getExtensions().getByType(ExtraPropertiesExtension.class).set("buildToolsInstallDir", null);
         project.afterEvaluate(p -> {
             if (Utils.isWindows() && !Utils.isNullOrEmpty((String) project.getProperties().get("buildToolsInstallDir"))) {
                 GroovyHooks.configureToolChains(project, nativeToolChains -> {
@@ -135,25 +102,9 @@ public class CMakeProjectPlugin implements Plugin<Project> {
                 });
             }
         });
-        CMakeHelper.registerCMakeProject(project, settings);
+        CMakeHelper.registerCMakeProject(project, settings, linkRelease, runtimeRelease, linkDebug, runtimeDebug);
 
         headers.getOutgoing().artifact(settings.getIncludeDirectory());
-
-        File link = new File(settings.getBuildDirectory().dir("lib/" + settings.getReleaseBuildType().get()).get().getAsFile(), "test");
-        File run = settings.getBuildDirectory().dir("bin/" + settings.getReleaseBuildType().get()).get().getAsFile();
-
-        linkRelease.getOutgoing().artifact(link);
-        linkDebug.getOutgoing().artifact(link);
-        runtimeRelease.getOutgoing().artifact(run);
-        runtimeDebug.getOutgoing().artifact(run);
-
-        settings.getLinkerBinaries().getAsFileTree().getFiles().forEach(linkRelease.getOutgoing()::artifact);
-        settings.getRuntimeLibraries().getAsFileTree().getFiles().forEach( runtimeRelease.getOutgoing()::artifact);
-
-        //Todo
-        settings.getLinkerBinaries().getAsFileTree().getFiles().forEach(linkDebug.getOutgoing()::artifact);
-        settings.getRuntimeLibraries().getAsFileTree().getFiles().forEach(runtimeDebug.getOutgoing()::artifact);
-
     }
 
 }

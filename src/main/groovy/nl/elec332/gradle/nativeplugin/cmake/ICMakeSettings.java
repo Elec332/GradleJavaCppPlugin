@@ -6,6 +6,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.SetProperty;
 
 /**
  * Created by Elec332 on 1/23/2021
@@ -29,13 +30,29 @@ public interface ICMakeSettings extends Named {
 
     MapProperty<String, String> getVariables();
 
-    ConfigurableFileCollection getLinkerBinaries();
 
-    ConfigurableFileCollection getRuntimeLibraries();
 
-    void linkerBinaries(Action<? super ConfigurableFileCollection> action);
+    SetProperty<String> getLinkerBinaries();
 
-    void runtimeLibraries(Action<? super ConfigurableFileCollection> action);
+    SetProperty<String> getRuntimeBinaries();
+
+    ConfigurableFileCollection getReleaseLinkerBinaries();
+
+    ConfigurableFileCollection getReleaseRuntimeBinaries();
+
+    ConfigurableFileCollection getDebugLinkerBinaries();
+
+    ConfigurableFileCollection getDebugRuntimeBinaries();
+
+    void releaseLinkerBinaries(Action<? super ConfigurableFileCollection> action);
+
+    void releaseRuntimeBinaries(Action<? super ConfigurableFileCollection> action);
+
+    void debugLinkerBinaries(Action<? super ConfigurableFileCollection> action);
+
+    void debugRuntimeBinaries(Action<? super ConfigurableFileCollection> action);
+
+
 
     Property<Boolean> getBuildSharedLibs();
 
