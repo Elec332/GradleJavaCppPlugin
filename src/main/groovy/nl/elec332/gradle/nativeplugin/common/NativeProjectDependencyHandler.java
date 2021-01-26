@@ -5,7 +5,6 @@ import nl.elec332.gradle.nativeplugin.cmake.CMakeHelper;
 import nl.elec332.gradle.nativeplugin.cmake.ICMakeSettings;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.SetProperty;
 import org.gradle.internal.metaobject.MethodAccess;
@@ -21,8 +20,7 @@ import java.util.Set;
  */
 public class NativeProjectDependencyHandler implements INativeProjectDependencyHandler, MethodMixIn {
 
-    NativeProjectDependencyHandler(ObjectFactory objectFactory, ImmutableAttributesFactory attributesFactory, Project project) {
-        this.attributesFactory = attributesFactory;
+    NativeProjectDependencyHandler(ObjectFactory objectFactory, Project project) {
         this.project = project;
 
         this.configurator = new DynamicDependencyMethods(allowedConfigs::contains, project);
@@ -36,9 +34,8 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
         this.linInc.set(Constants.LINUX_INCLUDES);
     }
 
-    private static final Collection<String> allowedConfigs = Arrays.asList("implementation", AbstractCppPlugin.DYNAMIC, AbstractCppPlugin.STATIC_LINKER, AbstractCppPlugin.LINKER, AbstractCppPlugin.HEADERS, AbstractCppPlugin.WINDOWS_HEADERS);
+    private static final Collection<String> allowedConfigs = Arrays.asList("implementation", "testImplementation", AbstractCppPlugin.DYNAMIC, AbstractCppPlugin.STATIC_LINKER, AbstractCppPlugin.LINKER, AbstractCppPlugin.HEADERS, AbstractCppPlugin.WINDOWS_HEADERS);
 
-    private final ImmutableAttributesFactory attributesFactory;
     private final Project project;
     private final MethodAccess configurator;
     private final SetProperty<String> winInc;

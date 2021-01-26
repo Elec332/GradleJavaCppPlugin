@@ -25,4 +25,6 @@ public interface INativeProjectExtension {
 
     void modifyCompiler(Action<? super CppCompile> action);
 
+    SetProperty<String> getTestArguments();
+
 }
