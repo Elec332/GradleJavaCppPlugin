@@ -9,8 +9,12 @@ version '1.0.0-Alpha'
 
 sourceCompatibility = targetCompatibility = 1.8
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
-    implementation "nl.elec332.gradle:Gradle-Utils:1.0.0-Alpha"
+    implementation "nl.elec332.lib:gradle-utils:1.0.1-Beta"
 }
 
 gradlePlugin {
@@ -18,25 +22,25 @@ gradlePlugin {
     plugins {
         cppApplicationPlugin {
             id = 'nl.elec332.gradle.cppapplication'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.CppApplicationPlugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.cppproject.CppApplicationPlugin'
             displayName = 'Gradle Native Application Development Plugin'
             description = "A Gradle plugin to simplify application development of C and C++"
         }
         cppLibraryPlugin {
             id = 'nl.elec332.gradle.cpplibrary'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.CppLibraryPlugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.cppproject.CppLibraryPlugin'
             displayName = 'Gradle Native Library Development Plugin'
             description = "A Gradle plugin to simplify library development of C and C++"
         }
         cppTestPlugin {
             id = 'nl.elec332.gradle.cpptest'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.CppTestPlugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.cppproject.CppTestPlugin'
             displayName = 'Gradle Native Tests Plugin'
             description = "A Gradle plugin to simplify library development of C and C++"
         }
         cmakePlugin {
             id = 'nl.elec332.gradle.cmake'
-            implementationClass = 'nl.elec332.gradle.nativeplugin.CMakeProjectPlugin'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.cmake.CMakeProjectPlugin'
             displayName = 'Gradle CMake Project Plugin'
             description = "A Gradle plugin to simplify library development of C and C++"
         }

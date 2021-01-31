@@ -1,8 +1,11 @@
-package nl.elec332.gradle.nativeplugin.common;
+package nl.elec332.gradle.nativeplugin.cppproject.extensions;
 
-import nl.elec332.gradle.nativeplugin.api.INativeProjectDependencyHandler;
-import nl.elec332.gradle.nativeplugin.cmake.CMakeHelper;
-import nl.elec332.gradle.nativeplugin.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectDependencyHandler;
+import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
+import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.cppproject.common.AbstractCppPlugin;
+import nl.elec332.gradle.nativeplugin.util.Constants;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
@@ -34,7 +37,11 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
         this.linInc.set(Constants.LINUX_INCLUDES);
     }
 
-    private static final Collection<String> allowedConfigs = Arrays.asList("implementation", "testImplementation", AbstractCppPlugin.DYNAMIC, AbstractCppPlugin.STATIC_LINKER, AbstractCppPlugin.LINKER, AbstractCppPlugin.HEADERS, AbstractCppPlugin.WINDOWS_HEADERS);
+    private static final Collection<String> allowedConfigs = Arrays.asList("implementation", "testImplementation",
+            AbstractCppPlugin.STATIC_LINKER,
+            CppUtilsPlugin.RUNTIME, CppUtilsPlugin.RUNTIME_RELEASE, CppUtilsPlugin.RUNTIME_DEBUG,
+            CppUtilsPlugin.LINKER, CppUtilsPlugin.LINKER_RELEASE, CppUtilsPlugin.LINKER_DEBUG,
+            CppUtilsPlugin.HEADERS, CppUtilsPlugin.WINDOWS_HEADERS);
 
     private final Project project;
     private final MethodAccess configurator;

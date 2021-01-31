@@ -1,4 +1,4 @@
-package nl.elec332.gradle.nativeplugin.cmake;
+package nl.elec332.gradle.nativeplugin.api.cmake;
 
 import org.gradle.api.Action;
 import org.gradle.api.Named;
@@ -31,7 +31,6 @@ public interface ICMakeSettings extends Named {
     MapProperty<String, String> getVariables();
 
 
-
     SetProperty<String> getLinkerBinaries();
 
     SetProperty<String> getRuntimeBinaries();
@@ -51,7 +50,6 @@ public interface ICMakeSettings extends Named {
     void debugLinkerBinaries(Action<? super ConfigurableFileCollection> action);
 
     void debugRuntimeBinaries(Action<? super ConfigurableFileCollection> action);
-
 
 
     Property<Boolean> getBuildSharedLibs();

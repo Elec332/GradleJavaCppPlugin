@@ -1,7 +1,7 @@
-package nl.elec332.gradle.nativeplugin;
+package nl.elec332.gradle.nativeplugin.cppproject;
 
-import nl.elec332.gradle.nativeplugin.api.INativeProjectExtension;
-import nl.elec332.gradle.nativeplugin.common.Constants;
+import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectExtension;
+import nl.elec332.gradle.nativeplugin.util.Constants;
 import nl.elec332.gradle.util.PluginHelper;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
@@ -29,6 +29,7 @@ public class CppTestPlugin implements Plugin<Project> {
                 project.getExtensions().getByType(CppTestSuite.class).getTestBinary().flatMap(CppTestExecutable::getRunTask).get().args(extension.getTestArguments().getOrElse(Collections.emptySet()));
             }
         });
+
     }
 
 }

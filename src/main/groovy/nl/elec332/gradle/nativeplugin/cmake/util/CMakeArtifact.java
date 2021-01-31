@@ -1,4 +1,4 @@
-package nl.elec332.gradle.nativeplugin.cmake;
+package nl.elec332.gradle.nativeplugin.cmake.util;
 
 import nl.elec332.gradle.util.Utils;
 import nl.elec332.gradle.util.abstraction.ITaskDependency;

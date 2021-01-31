@@ -1,4 +1,4 @@
-package nl.elec332.gradle.nativeplugin.api;
+package nl.elec332.gradle.nativeplugin.api.cppproject;
 
 import org.gradle.api.Action;
 import org.gradle.api.provider.Property;
@@ -25,6 +25,16 @@ public interface INativeProjectExtension {
 
     void modifyCompiler(Action<? super CppCompile> action);
 
+    Property<Boolean> getGenerateExportHeader();
+
+    Property<Boolean> getStaticRuntime();
+
+    Property<Boolean> getMinimizeSize();
+
+    ///////// Test properties /////////
+
     SetProperty<String> getTestArguments();
+
+    Property<Boolean> getStaticTestRuntime();
 
 }

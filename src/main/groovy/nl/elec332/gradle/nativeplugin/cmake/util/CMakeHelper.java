@@ -1,9 +1,10 @@
-package nl.elec332.gradle.nativeplugin.cmake;
+package nl.elec332.gradle.nativeplugin.cmake.util;
 
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
 import nl.elec332.gradle.nativeplugin.cmake.tasks.CMakeBuildTask;
 import nl.elec332.gradle.nativeplugin.cmake.tasks.CMakeSetupTask;
-import nl.elec332.gradle.nativeplugin.common.AbstractCppPlugin;
-import nl.elec332.gradle.nativeplugin.common.Constants;
+import nl.elec332.gradle.nativeplugin.util.Constants;
 import nl.elec332.gradle.util.Utils;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
@@ -40,7 +41,6 @@ public class CMakeHelper {
         }
     }
 
-    //Todo: Fix
     public static void registerCMakeProject(Project project, ICMakeSettings settings, Configuration linkRelease, Configuration runtimeRelease, Configuration linkDebug, Configuration runtimeDebug) {
         CMakeSetupTask setupTask = project.getTasks().create("setupCMake_" + settings.getName(), CMakeSetupTask.class, settings);
         CMakeBuildTask buildTaskRelease = project.getTasks().create("buildCMakeRelease_" + settings.getName(), CMakeBuildTask.class, settings, settings.getReleaseBuildType());
@@ -66,23 +66,27 @@ public class CMakeHelper {
     }
 
     public static void registerCMakeDependency(Project project, String name, Action<? super ICMakeSettings> modifier) {
-        ICMakeSettings settings = newSettings(project, name,null);
+        ICMakeSettings settings = newSettings(project, name, null);
         modifier.execute(settings);
         CMakeSetupTask setupTask = project.getTasks().create("setupCMake_" + settings.getName(), CMakeSetupTask.class, settings);
         CMakeBuildTask buildTaskRelease = project.getTasks().create("buildCMakeRelease_" + settings.getName(), CMakeBuildTask.class, settings, settings.getReleaseBuildType());
         buildTaskRelease.usingSetup(setupTask);
-        //CMakeBuildTask buildTaskDebug = project.getTasks().create("buildCMakeDebug_" + settings.getName(), CMakeBuildTask.class, settings, settings.getDebugBuildType());
-        //buildTaskDebug.usingSetup(setupTask);
+        CMakeBuildTask buildTaskDebug = project.getTasks().create("buildCMakeDebug_" + settings.getName(), CMakeBuildTask.class, settings, settings.getDebugBuildType());
+        buildTaskDebug.usingSetup(setupTask);
 
         project.afterEvaluate(p -> configureBinaries(settings));
 
         ConfigurableFileCollection headers = project.files(settings.getIncludeDirectory());
-        project.getDependencies().add(AbstractCppPlugin.HEADERS, headers);
-        project.getDependencies().add(AbstractCppPlugin.LINKER, settings.getReleaseLinkerBinaries());
-        project.getDependencies().add(AbstractCppPlugin.DYNAMIC, settings.getReleaseRuntimeBinaries());
+        project.getDependencies().add(CppUtilsPlugin.HEADERS, headers);
+        project.getDependencies().add(CppUtilsPlugin.LINKER_RELEASE, settings.getReleaseLinkerBinaries());
+        project.getDependencies().add(CppUtilsPlugin.RUNTIME_RELEASE, settings.getReleaseRuntimeBinaries());
+        project.getDependencies().add(CppUtilsPlugin.LINKER_DEBUG, settings.getDebugLinkerBinaries());
+        project.getDependencies().add(CppUtilsPlugin.RUNTIME_DEBUG, settings.getDebugRuntimeBinaries());
         headers.builtBy(setupTask);
         settings.getReleaseLinkerBinaries().builtBy(buildTaskRelease);
         settings.getReleaseRuntimeBinaries().builtBy(buildTaskRelease);
+        settings.getDebugLinkerBinaries().builtBy(buildTaskDebug);
+        settings.getDebugRuntimeBinaries().builtBy(buildTaskDebug);
     }
 
     private static void configureBinaries(ICMakeSettings settings) {
@@ -95,7 +99,7 @@ public class CMakeHelper {
     private static void configureOne(ICMakeSettings settings, ConfigurableFileCollection binaries, SetProperty<String> includer, Property<String> buildType) {
         if (binaries.isEmpty() || includer.isPresent()) {
 
-            //TODO: SetProperties are always present, fix
+            //TODO: SetProperties are always present, fix or report to gradle...
             Collection<String> extra;
             if (binaries.isEmpty()) {
                 if (includer.isPresent() && !includer.get().isEmpty()) {

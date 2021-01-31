@@ -1,4 +1,4 @@
-package nl.elec332.gradle.nativeplugin.common;
+package nl.elec332.gradle.nativeplugin.cppproject.extensions;
 
 import groovy.lang.Closure;
 import org.gradle.api.Project;
@@ -39,7 +39,7 @@ public class DynamicDependencyMethods implements MethodAccess {
             } else {
                 List<?> normalizedArgs = CollectionUtils.flattenCollections(arguments);
                 if (normalizedArgs.size() == 2 && normalizedArgs.get(1) instanceof Closure) {
-                    return DynamicInvokeResult.found(this.dependencyHandler.add(name, normalizedArgs.get(0), (Closure<?>)normalizedArgs.get(1)));
+                    return DynamicInvokeResult.found(this.dependencyHandler.add(name, normalizedArgs.get(0), (Closure<?>) normalizedArgs.get(1)));
                 } else if (normalizedArgs.size() == 1) {
                     return DynamicInvokeResult.found(this.dependencyHandler.add(name, normalizedArgs.get(0)));
                 } else {

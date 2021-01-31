@@ -1,16 +1,16 @@
-package nl.elec332.gradle.nativeplugin;
+package nl.elec332.gradle.nativeplugin.cmake;
 
-import nl.elec332.gradle.nativeplugin.cmake.CMakeHelper;
-import nl.elec332.gradle.nativeplugin.cmake.ICMakeSettings;
-import nl.elec332.gradle.nativeplugin.common.AbstractCppPlugin;
-import nl.elec332.gradle.nativeplugin.common.Constants;
-import nl.elec332.gradle.util.GroovyHooks;
+import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
+import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.util.Constants;
+import nl.elec332.gradle.nativeplugin.util.NativeHelper;
 import nl.elec332.gradle.util.PluginHelper;
-import nl.elec332.gradle.util.Utils;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.internal.artifacts.ArtifactAttributes;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
@@ -18,10 +18,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.language.cpp.CppBinary;
 import org.gradle.language.cpp.plugins.CppBasePlugin;
 import org.gradle.language.swift.plugins.SwiftBasePlugin;
-import org.gradle.nativeplatform.toolchain.VisualCpp;
 import org.gradle.nativeplatform.toolchain.internal.plugins.StandardToolChainsPlugin;
-
-import static org.gradle.api.artifacts.type.ArtifactTypeDefinition.DIRECTORY_TYPE;
 
 /**
  * Created by Elec332 on 1/24/2021
@@ -52,11 +49,11 @@ public class CMakeProjectPlugin implements Plugin<Project> {
             it.setCanBeResolved(false);
         });
 
-        Configuration headers = project.getConfigurations().create(AbstractCppPlugin.HEADERS, it -> {
+        Configuration headers = project.getConfigurations().create(CppUtilsPlugin.HEADERS, it -> {
             it.setCanBeResolved(true);
             it.extendsFrom(implementation);
             it.getAttributes().attribute(Usage.USAGE_ATTRIBUTE, cppApiUsage);
-            it.getAttributes().attribute(ArtifactAttributes.ARTIFACT_FORMAT, DIRECTORY_TYPE);
+            it.getAttributes().attribute(ArtifactAttributes.ARTIFACT_FORMAT, ArtifactTypeDefinition.DIRECTORY_TYPE);
         });
 
         Configuration linkDebug = project.getConfigurations().create("linkDebug", it -> {
@@ -90,18 +87,8 @@ public class CMakeProjectPlugin implements Plugin<Project> {
         });
 
         project.getExtensions().getByType(ExtraPropertiesExtension.class).set("buildToolsInstallDir", null);
-        project.afterEvaluate(p -> {
-            if (Utils.isWindows() && !Utils.isNullOrEmpty((String) project.getProperties().get("buildToolsInstallDir"))) {
-                GroovyHooks.configureToolChains(project, nativeToolChains -> {
-                    if (nativeToolChains.isEmpty()) {
-                        System.out.println("No toolchains were detected by Gradle, applying VCBT settings...");
-                        nativeToolChains.create("visualCppBT", VisualCpp.class, tc ->
-                                tc.setInstallDir(project.getProperties().get("buildToolsInstallDir"))
-                        );
-                    }
-                });
-            }
-        });
+        project.afterEvaluate(p -> NativeHelper.addBuildTools(project, (String) project.getProperties().get("buildToolsInstallDir")));
+
         CMakeHelper.registerCMakeProject(project, settings, linkRelease, runtimeRelease, linkDebug, runtimeDebug);
 
         headers.getOutgoing().artifact(settings.getIncludeDirectory());

@@ -1,8 +1,9 @@
-package nl.elec332.gradle.nativeplugin.common;
+package nl.elec332.gradle.nativeplugin.cppproject.extensions;
 
-import nl.elec332.gradle.nativeplugin.CppTestPlugin;
-import nl.elec332.gradle.nativeplugin.api.INativeProjectDependencyHandler;
-import nl.elec332.gradle.nativeplugin.api.INativeProjectExtension;
+import nl.elec332.gradle.nativeplugin.cppproject.CppTestPlugin;
+import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectDependencyHandler;
+import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectExtension;
+import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
@@ -28,31 +29,41 @@ public class NativeProjectExtension implements INativeProjectExtension {
         linkage = objectFactory.setProperty(Linkage.class);
         cppVersion = objectFactory.property(String.class);
         btInstDir = objectFactory.property(String.class);
-        compilerMods = new HashSet<>();
         hIncCheck = new HashMap<>();
         hIncCheckFound = new HashSet<>();
         ghf = objectFactory.property(String.class);
         depHandler = new NativeProjectDependencyHandler(objectFactory, project);
         generatedHeaders = objectFactory.directoryProperty().fileValue(file);
         testArguments = objectFactory.setProperty(String.class);
+        staticRuntime = objectFactory.property(Boolean.class);
+        minimizeSize = objectFactory.property(Boolean.class);
+        generateExportHeader = objectFactory.property(Boolean.class);
+        staticTestRuntime = objectFactory.property(Boolean.class);
 
         linkage.set(Collections.singletonList(Linkage.SHARED));
         btInstDir.set("");
         ghf.set(project.getName().trim().toLowerCase(Locale.ROOT));
         cppVersion.set("c++14");
+        staticRuntime.set(false);
+        minimizeSize.set(false);
+        generateExportHeader.set(true);
+        staticTestRuntime.set(true);
     }
 
     private final Project project;
     private final SetProperty<Linkage> linkage;
     private final Property<String> cppVersion;
     private final Property<String> btInstDir;
-    private final Set<Action<? super CppCompile>> compilerMods;
     private final Map<String, String> hIncCheck;
     private final Set<String> hIncCheckFound;
     private final Property<String> ghf;
     private final NativeProjectDependencyHandler depHandler;
     private final DirectoryProperty generatedHeaders;
     private final SetProperty<String> testArguments;
+    private final Property<Boolean> staticRuntime;
+    private final Property<Boolean> minimizeSize;
+    private final Property<Boolean> generateExportHeader;
+    private final Property<Boolean> staticTestRuntime;
 
     @Override
     public SetProperty<Linkage> getLinkage() {
@@ -88,7 +99,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
 
     @Override
     public void modifyCompiler(Action<? super CppCompile> action) {
-        compilerMods.add(action);
+        CppUtilsPlugin.getBasePlugin(project).modifyCompiler(action);
     }
 
     @Override
@@ -99,8 +110,24 @@ public class NativeProjectExtension implements INativeProjectExtension {
         return this.testArguments;
     }
 
-    public Set<Action<? super CppCompile>> getCompilerMods() {
-        return compilerMods;
+    @Override
+    public Property<Boolean> getGenerateExportHeader() {
+        return this.generateExportHeader;
+    }
+
+    @Override
+    public Property<Boolean> getStaticRuntime() {
+        return this.staticRuntime;
+    }
+
+    @Override
+    public Property<Boolean> getMinimizeSize() {
+        return this.minimizeSize;
+    }
+
+    @Override
+    public Property<Boolean> getStaticTestRuntime() {
+        return this.staticTestRuntime;
     }
 
     public Map<String, String> getHeaderIncludeCheck() {

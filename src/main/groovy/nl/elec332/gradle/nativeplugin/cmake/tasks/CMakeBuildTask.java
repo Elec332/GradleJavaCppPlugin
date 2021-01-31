@@ -1,7 +1,7 @@
 package nl.elec332.gradle.nativeplugin.cmake.tasks;
 
-import nl.elec332.gradle.nativeplugin.cmake.CMakeHelper;
-import nl.elec332.gradle.nativeplugin.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;

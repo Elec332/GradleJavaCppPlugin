@@ -1,8 +1,9 @@
 package nl.elec332.gradle.nativeplugin.cmake.tasks;
 
-import nl.elec332.gradle.nativeplugin.cmake.CMakeHelper;
-import nl.elec332.gradle.nativeplugin.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFiles;
@@ -21,6 +22,8 @@ public class CMakeSetupTask extends DefaultTask {
     }
 
     private final ICMakeSettings settings;
+    private FileCollection cmakeLists;
+    private FileCollection cmakeFiles;
 
     @TaskAction
     public void setupCMakeFiles() {
@@ -44,12 +47,23 @@ public class CMakeSetupTask extends DefaultTask {
 
     @InputFiles
     public FileCollection getCMakeLists() {
-        return getProject().fileTree(settings.getProjectDirectory(), it -> it.include("**/CMakeLists.txt"));
+        if (cmakeLists == null) {
+            cmakeLists = getProject().fileTree(settings.getProjectDirectory(), it -> it.include("**/CMakeLists.txt"));
+        }
+        return cmakeLists;
     }
 
     @OutputFiles
     public FileCollection getCmakeFiles() {
-        return getProject().fileTree(settings.getBuildDirectory(), it -> it.include("**/CMakeFiles/**/*").include("**/Makefile").include("**/*.cmake"));
+        if (cmakeFiles == null) {
+            cmakeFiles = getProject().fileTree(settings.getBuildDirectory(), it -> it.include("**/CMakeFiles/**/*").include("**/Makefile").include("**/*.cmake"));
+        }
+        return cmakeFiles;
+    }
+
+    @InputFiles
+    public DirectoryProperty getIncludeFiles() {
+        return settings.getIncludeDirectory();
     }
 
 }

@@ -1,7 +1,7 @@
-package nl.elec332.gradle.nativeplugin.api;
+package nl.elec332.gradle.nativeplugin.api.cppproject;
 
 import groovy.lang.Closure;
-import nl.elec332.gradle.nativeplugin.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
 import org.gradle.api.Action;
 import org.gradle.api.provider.SetProperty;
 import org.gradle.util.ConfigureUtil;

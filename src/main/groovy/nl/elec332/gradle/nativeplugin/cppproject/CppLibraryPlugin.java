@@ -1,6 +1,6 @@
-package nl.elec332.gradle.nativeplugin;
+package nl.elec332.gradle.nativeplugin.cppproject;
 
-import nl.elec332.gradle.nativeplugin.common.AbstractCppPlugin;
+import nl.elec332.gradle.nativeplugin.cppproject.common.AbstractCppPlugin;
 
 import javax.annotation.Nonnull;
 

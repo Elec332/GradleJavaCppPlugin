@@ -1,4 +1,4 @@
-package nl.elec332.gradle.nativeplugin.common;
+package nl.elec332.gradle.nativeplugin.util;
 
 import java.io.File;
 import java.util.Arrays;

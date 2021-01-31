@@ -1,21 +1,39 @@
-package nl.elec332.gradle.nativeplugin.common;
+package nl.elec332.gradle.nativeplugin.cppproject.common;
 
 import nl.elec332.gradle.util.GroovyHooks;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.tasks.Exec;
 import org.gradle.language.cpp.CppBinary;
+import org.gradle.language.cpp.CppStaticLibrary;
+import org.gradle.nativeplatform.tasks.CreateStaticLibrary;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.util.Set;
 
 /**
- * Created by Elec332 on 28-12-2020
+ * Created by Elec332 on 1/30/2021
  */
-public class LinuxHelper {
+@SuppressWarnings("UnstableApiUsage")
+public class StaticLibraryHandler {
 
-    @SuppressWarnings("UnstableApiUsage")
-    public static String createStaticMergeTask(Project project, CppBinary binary, File linkFile, String... files) {
+    static void mergeStaticLibraries(Project project, CppBinary binary) {
+        Configuration staticConfig = project.getConfigurations().getAt(AbstractCppPlugin.STATIC_LINKER);
+        if (binary instanceof CppStaticLibrary) {
+            Set<File> deps = staticConfig.resolve();
+            if (binary.getTargetPlatform().getTargetMachine().getOperatingSystemFamily().isWindows()) {
+                deps.forEach(file -> ((CreateStaticLibrary) ((CppStaticLibrary) binary).getLinkFileProducer().get()).source(project.files(file)));
+            } else {
+                ((CppStaticLibrary) binary).getCreateTask().get().finalizedBy(createStaticMergeTaskLinux(project, binary, ((CppStaticLibrary) binary).getLinkFile().get().getAsFile(), deps.stream().map(File::getAbsolutePath).toArray(String[]::new)));
+            }
+        } else {
+            ((Configuration) binary.getLinkLibraries()).extendsFrom(staticConfig);
+        }
+    }
+
+    private static String createStaticMergeTaskLinux(Project project, CppBinary binary, File linkFile, String... files) {
         String name = "concat_" + binary.getName() + "_" + binary.getBaseName().get();
         project.getTasks().create(name, Exec.class, task -> {
             String file = linkFile.getAbsolutePath();

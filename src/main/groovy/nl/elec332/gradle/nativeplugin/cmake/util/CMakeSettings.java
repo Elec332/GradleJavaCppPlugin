@@ -1,6 +1,7 @@
-package nl.elec332.gradle.nativeplugin.cmake;
+package nl.elec332.gradle.nativeplugin.cmake.util;
 
-import nl.elec332.gradle.nativeplugin.common.Constants;
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
+import nl.elec332.gradle.nativeplugin.util.Constants;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -45,9 +46,9 @@ class CMakeSettings implements ICMakeSettings {
         this.runtimeInclude = objectFactory.setProperty(String.class);
 
         if (projDir != Constants.NULL_FILE) {
-            this.projectDirectory.set(projDir);
+            this.getProjectDirectory().set(projDir);
         }
-        this.includeDir.set(projectDirectory.dir(Constants.DEFAULT_INCLUDE_FOLDER));
+        this.includeDir.set(getProjectDirectory().dir(Constants.DEFAULT_INCLUDE_FOLDER));
         this.buildDir.set(buildDir);
         this.buildConfigR.set(Constants.CMAKE_RELEASE_CONFIG);
         this.buildConfigD.set(Constants.CMAKE_DEBUG_CONFIG);

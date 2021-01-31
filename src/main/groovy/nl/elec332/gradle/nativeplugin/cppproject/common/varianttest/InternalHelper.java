@@ -1,4 +1,4 @@
-package nl.elec332.gradle.nativeplugin.common;
+package nl.elec332.gradle.nativeplugin.cppproject.common.varianttest;
 
 import org.gradle.api.Project;
 import org.gradle.api.attributes.Attribute;
@@ -24,7 +24,7 @@ import java.util.function.Function;
 
 /**
  * Created by Elec332 on 1/10/2021
- *
+ * <p>
  * All dirty hacks and usage of internal Gradle API's can be found here...
  */
 public class InternalHelper {
