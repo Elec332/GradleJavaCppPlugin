@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    implementation "nl.elec332.lib:gradle-utils:1.0.1-Beta"
+    implementation "nl.elec332.lib:gradle-utils:1.0.2-Beta"
 }
 
 gradlePlugin {
@@ -36,13 +36,13 @@ gradlePlugin {
             id = 'nl.elec332.gradle.cpptest'
             implementationClass = 'nl.elec332.gradle.nativeplugin.cppproject.CppTestPlugin'
             displayName = 'Gradle Native Tests Plugin'
-            description = "A Gradle plugin to simplify library development of C and C++"
+            description = "A Gradle plugin to simplify testing C and C++ projects"
         }
         cmakePlugin {
             id = 'nl.elec332.gradle.cmake'
             implementationClass = 'nl.elec332.gradle.nativeplugin.cmake.CMakeProjectPlugin'
             displayName = 'Gradle CMake Project Plugin'
-            description = "A Gradle plugin to simplify library development of C and C++"
+            description = "A Gradle plugin to wrap CMake projects as a Grdale project"
         }
     }
 

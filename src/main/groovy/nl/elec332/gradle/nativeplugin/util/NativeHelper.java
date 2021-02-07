@@ -3,6 +3,10 @@ package nl.elec332.gradle.nativeplugin.util;
 import nl.elec332.gradle.util.GroovyHooks;
 import nl.elec332.gradle.util.Utils;
 import org.gradle.api.Project;
+import org.gradle.api.attributes.AttributeContainer;
+import org.gradle.language.cpp.CppBinary;
+import org.gradle.language.cpp.internal.DefaultCppBinary;
+import org.gradle.language.cpp.internal.NativeVariantIdentity;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
 /**
@@ -22,6 +26,15 @@ public class NativeHelper {
                 }
             });
         }
+    }
+
+    public static boolean isDebug(CppBinary binary) {
+        return binary.isDebuggable() && !binary.isOptimized();
+    }
+
+    public static AttributeContainer getAttributes(CppBinary binary) {
+        NativeVariantIdentity identity = ((DefaultCppBinary) binary).getIdentity();
+        return identity.getRuntimeUsageContext().getAttributes();
     }
 
 }

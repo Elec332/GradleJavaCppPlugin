@@ -51,7 +51,13 @@ public class GeneratedHeaderHandler {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            extension.modifyCompiler(compiler -> compiler.getCompilerArgs().add("-D" + name + "_CREATE_EXPORTS"));
+            extension.modifyCompiler(compiler -> {
+                compiler.getCompilerArgs().add("-D" + name + "_CREATE_EXPORTS");
+                Object o = compiler.property("isStatic");
+                if (o != null && (boolean) o) {
+                    compiler.getCompilerArgs().add("-D" + name + "_STATIC_DEFINE");
+                }
+            });
         }
     }
 

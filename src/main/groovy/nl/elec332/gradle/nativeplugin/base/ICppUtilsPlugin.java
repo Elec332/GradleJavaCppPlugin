@@ -10,6 +10,8 @@ public interface ICppUtilsPlugin {
 
     <T> void addComponentConfigurator(IComponentConfigurator<T> configurator, T data);
 
+    <T> void modifyComponentsDirect(IComponentConfigurator<T> configurator, T data);
+
     <T> void addBinaryConfigurator(IBinaryConfigurator<T> configurator, T data);
 
     void modifyCompiler(Action<? super CppCompile> action);

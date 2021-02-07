@@ -1,9 +1,9 @@
 package nl.elec332.gradle.nativeplugin.cppproject.extensions;
 
+import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
 import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectDependencyHandler;
 import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
 import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
-import nl.elec332.gradle.nativeplugin.api.cmake.ICMakeSettings;
 import nl.elec332.gradle.nativeplugin.cppproject.common.AbstractCppPlugin;
 import nl.elec332.gradle.nativeplugin.util.Constants;
 import org.gradle.api.Action;

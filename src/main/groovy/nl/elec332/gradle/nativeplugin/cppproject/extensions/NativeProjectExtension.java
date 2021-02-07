@@ -1,9 +1,9 @@
 package nl.elec332.gradle.nativeplugin.cppproject.extensions;
 
-import nl.elec332.gradle.nativeplugin.cppproject.CppTestPlugin;
 import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectDependencyHandler;
 import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectExtension;
 import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
+import nl.elec332.gradle.nativeplugin.cppproject.CppTestPlugin;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
@@ -46,7 +46,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
         cppVersion.set("c++14");
         staticRuntime.set(false);
         minimizeSize.set(false);
-        generateExportHeader.set(true);
+        generateExportHeader.set(false);
         staticTestRuntime.set(true);
     }
 

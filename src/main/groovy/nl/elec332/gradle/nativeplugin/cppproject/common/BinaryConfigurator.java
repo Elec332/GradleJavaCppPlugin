@@ -2,12 +2,14 @@ package nl.elec332.gradle.nativeplugin.cppproject.common;
 
 import nl.elec332.gradle.nativeplugin.base.IBinaryConfigurator;
 import nl.elec332.gradle.nativeplugin.cppproject.extensions.NativeProjectExtension;
+import nl.elec332.gradle.nativeplugin.util.NativeHelper;
+import nl.elec332.gradle.nativeplugin.util.NativeVariantHelper;
 import nl.elec332.gradle.util.GroovyHooks;
 import org.gradle.api.Project;
+import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.language.cpp.CppBinary;
 import org.gradle.language.cpp.CppSharedLibrary;
-import org.gradle.language.nativeplatform.ComponentWithExecutable;
-import org.gradle.language.nativeplatform.ComponentWithInstallation;
+import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.nativeplatform.tasks.AbstractLinkTask;
 import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
@@ -15,6 +17,7 @@ import org.gradle.nativeplatform.toolchain.VisualCpp;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -25,14 +28,15 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
 
     @Override
     public void configureBinary(Project project, CppBinary binary, NativeProjectExtension data) {
+        setAttributes(project, binary, data);
         StaticLibraryHandler.mergeStaticLibraries(project, binary);
         setCompilerParameters(data, binary);
         checkIncludes(data, binary);
     }
 
     @Override
-    public <B extends CppBinary & ComponentWithExecutable & ComponentWithInstallation> void configureExecutableBinary(Project project, B binary, NativeProjectExtension data) {
-        addDependencies(binary, binary.getLinkTask().get(), data);
+    public void configureTestExecutableBinary(Project project, CppTestExecutable binary, NativeProjectExtension data) {
+        NativeVariantHelper.modifyIncomingAttributes(project, binary, VariantConfigurator.SHARED_RUNTIME, !data.getStaticTestRuntime().get());
     }
 
     @Override
@@ -65,13 +69,11 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
         binary.getCompileTask().get().getIncludes().forEach(all::add);
         binary.getCompileTask().get().getSystemIncludes().forEach(all::add);
         Set<String> remove = new HashSet<>();
-        System.out.println(binary.getName());
         for (String s : nativeProject.getHeadersFound()) {
             Iterator<File> it = all.iterator();
             boolean found = false;
             while (!found && it.hasNext()) {
                 File f = it.next();
-                System.out.println(f);
                 if (new File(f, s).exists()) {
                     found = true;
                 }
@@ -85,6 +87,22 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
         remove.clear();
     }
 
+    private static void setAttributes(Project project, CppBinary binary, NativeProjectExtension data) {
+        CppCompile compileTask = binary.getCompileTask().get();
+        boolean staticRuntime = data.getStaticRuntime().getOrElse(false);
+
+        if (!compileTask.hasProperty(VariantConfigurator.STATIC_RUNTIME_NAME)) {
+            NativeVariantHelper.modifyOutgoingAttributes(project, binary, VariantConfigurator.STATIC_RUNTIME, staticRuntime);
+            compileTask.getExtensions().getByType(ExtraPropertiesExtension.class).set(VariantConfigurator.STATIC_RUNTIME_NAME, staticRuntime);
+        }
+        staticRuntime = (boolean) Objects.requireNonNull(compileTask.property(VariantConfigurator.STATIC_RUNTIME_NAME));
+
+        NativeVariantHelper.modifyIncomingAttributes(project, binary, VariantConfigurator.SHARED_RUNTIME, !staticRuntime);
+        if (!staticRuntime) {
+            NativeVariantHelper.modifyOutgoingAttributes(project, binary, VariantConfigurator.SHARED_RUNTIME, true);
+        }
+    }
+
     private static void setCompilerParameters(NativeProjectExtension extension, CppBinary binary) {
         Set<String> extraArgs = new HashSet<>();
 
@@ -93,13 +111,14 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
         }
         if (binary.getToolChain() instanceof VisualCpp) {
             String arg = "-";
-            if (extension.getStaticRuntime().get() || (binary instanceof CppTestExecutable && extension.getStaticTestRuntime().get())) {
+            boolean staticRuntime = (boolean) Objects.requireNonNull(binary.getCompileTask().get().property(VariantConfigurator.STATIC_RUNTIME_NAME));
+            if (staticRuntime || (binary instanceof CppTestExecutable && extension.getStaticTestRuntime().get())) {
                 arg += "MT";
             } else {
                 arg += "MD";
             }
-            if (binary.isDebuggable()) {
-                arg += "d";
+            if (NativeHelper.isDebug(binary)) {
+                //arg += "d";
                 extraArgs.add("/Od");
                 extraArgs.add("/Ob0");
             }

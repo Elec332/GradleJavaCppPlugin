@@ -7,6 +7,7 @@ import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.language.ComponentWithBinaries;
 import org.gradle.language.cpp.*;
 import org.gradle.language.cpp.tasks.CppCompile;
@@ -33,13 +34,17 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     public static final String RUNTIME_DEBUG = "runtimeDebug";
 
 
-    private final Map<IComponentConfigurator<Object>, Object> componentConfigurators = new LinkedHashMap<>();
+    private final Map<IComponentConfigurator<?>, Object> componentConfigurators = new LinkedHashMap<>();
     private final Map<IBinaryConfigurator<Object>, Object> binaryConfigurators = new LinkedHashMap<>();
     private final Set<Action<? super CppCompile>> compilerMods = new LinkedHashSet<>();
+    private Map<Object, Set<Runnable>> callbacks = new WeakHashMap<>();
+    private Project project;
+    private boolean cpmLock = false;
 
     @Override
     public void apply(Project project) {
         PluginHelper.checkMinimumGradleVersion(Constants.GRADLE_VERSION);
+        this.project = project;
 
         project.getConfigurations().create(HEADERS);
         project.getConfigurations().create(WINDOWS_HEADERS);
@@ -52,23 +57,16 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
         project.getConfigurations().create(RUNTIME_RELEASE).extendsFrom(runtime);
         project.getConfigurations().create(RUNTIME_DEBUG).extendsFrom(runtime);
 
-        Set<Runnable> callbacks = new HashSet<>();
         project.afterEvaluate(p -> {
 
             //Run component modifiers
-            project.getComponents().forEach(softwareComponent -> {
-                if (softwareComponent instanceof CppComponent) {
-                    componentConfigurators.forEach((configurator, data) -> configurator.configureComponent(project, (CppComponent) softwareComponent, callbacks::add, data));
-                    if (softwareComponent instanceof CppLibrary) {
-                        componentConfigurators.forEach((configurator, data) -> configurator.configureLibrary(project, (CppLibrary) softwareComponent, callbacks::add, data));
-                    } else if (softwareComponent instanceof CppApplication) {
-                        componentConfigurators.forEach((configurator, data) -> configurator.configureExecutable(project, (CppApplication) softwareComponent, callbacks::add, data));
-                    } // No need to alter CppTestSuite (yet)
-                }
-            });
+            modifyComponents(componentConfigurators);
 
             //Run binary modifiers
             modifyBinaries(project, binary -> {
+
+                binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set("isStatic", binary instanceof CppStaticLibrary);
+
                 binaryConfigurators.forEach((configurator, data) -> configurator.configureBinary(project, binary, data));
                 if (binary instanceof CppStaticLibrary) {
                     CppStaticLibrary lib = (CppStaticLibrary) binary;
@@ -94,11 +92,15 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
                 }
             });
 
-            //Run compiler modifiers
-            project.getTasks().withType(CppCompile.class).configureEach(c -> compilerMods.forEach(a -> a.execute(c)));
+            project.afterEvaluate(p2 -> {
 
-            //Run callbacks
-            project.afterEvaluate(p2 -> callbacks.forEach(Runnable::run));
+                //Run compiler modifiers
+                project.getTasks().withType(CppCompile.class).configureEach(c -> {
+                    cpmLock = true;
+                    compilerMods.forEach(a -> a.execute(c));
+                });
+
+            });
         });
 
         addBinaryConfigurator(new IBinaryConfigurator<Object>() {
@@ -111,15 +113,33 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
         }, null);
     }
 
-    private static void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
+    private void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
         project.getComponents().forEach(component -> {
             if (component instanceof ComponentWithBinaries) {
-                ((ComponentWithBinaries) component).getBinaries().whenElementFinalized(softwareComponent -> {
-                    if (softwareComponent instanceof CppBinary) {
-                        CppBinary binary = (CppBinary) softwareComponent;
-                        consumer.accept(binary);
+                ((ComponentWithBinaries) component).getBinaries().whenElementFinalized(binary -> {
+                    Set<Runnable> callbacks = this.callbacks.getOrDefault(component, Collections.emptySet());
+                    callbacks.forEach(Runnable::run);
+                    this.callbacks.remove(component);
+                    if (binary instanceof CppBinary) {
+                        consumer.accept((CppBinary) binary);
                     }
                 });
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void modifyComponents(Map<IComponentConfigurator<?>, Object> componentConfigurators_) {
+        Map<IComponentConfigurator<Object>, Object> componentConfigurators = (Map<IComponentConfigurator<Object>, Object>) (Map<?, ?>) componentConfigurators_; //How about this for a dirty cast?
+        project.getComponents().forEach(softwareComponent -> {
+            Set<Runnable> callbacks = this.callbacks.computeIfAbsent(softwareComponent, o -> new HashSet<>());
+            if (softwareComponent instanceof CppComponent) {
+                componentConfigurators.forEach((configurator, data) -> configurator.configureComponent(project, (CppComponent) softwareComponent, callbacks::add, data));
+                if (softwareComponent instanceof CppLibrary) {
+                    componentConfigurators.forEach((configurator, data) -> configurator.configureLibrary(project, (CppLibrary) softwareComponent, callbacks::add, data));
+                } else if (softwareComponent instanceof CppApplication) {
+                    componentConfigurators.forEach((configurator, data) -> configurator.configureExecutable(project, (CppApplication) softwareComponent, callbacks::add, data));
+                } // No need to alter CppTestSuite (yet)
             }
         });
     }
@@ -157,19 +177,27 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> void addComponentConfigurator(IComponentConfigurator<T> configurator, T data) {
-        componentConfigurators.put((IComponentConfigurator<Object>) configurator, data);
+        componentConfigurators.put(configurator, data);
     }
 
     @Override
+    public <T> void modifyComponentsDirect(IComponentConfigurator<T> configurator, T data) {
+        modifyComponents(Collections.singletonMap(configurator, data));
+    }
+
     @SuppressWarnings("unchecked")
+    @Override
     public <T> void addBinaryConfigurator(IBinaryConfigurator<T> configurator, T data) {
         binaryConfigurators.put((IBinaryConfigurator<Object>) configurator, data);
     }
 
     @Override
     public void modifyCompiler(Action<? super CppCompile> action) {
+        if (cpmLock) {
+            project.getTasks().withType(CppCompile.class).configureEach(action);
+            return;
+        }
         compilerMods.add(action);
     }
 }

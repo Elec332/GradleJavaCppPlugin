@@ -2,7 +2,9 @@ package nl.elec332.gradle.nativeplugin.cppproject.common;
 
 import nl.elec332.gradle.nativeplugin.api.cppproject.INativeProjectExtension;
 import nl.elec332.gradle.nativeplugin.base.CppUtilsPlugin;
+import nl.elec332.gradle.nativeplugin.base.IComponentConfigurator;
 import nl.elec332.gradle.nativeplugin.cppproject.extensions.NativeProjectExtension;
+import nl.elec332.gradle.nativeplugin.jetbrains.CLionRunConfigPlugin;
 import nl.elec332.gradle.nativeplugin.util.Constants;
 import nl.elec332.gradle.nativeplugin.util.NativeHelper;
 import nl.elec332.gradle.util.PluginHelper;
@@ -10,11 +12,13 @@ import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.language.cpp.CppLibrary;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 /**
  * Created by Elec332 on 6-11-2020
@@ -32,6 +36,7 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
         NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project, generatedHeaders);
 
         project.getPlugins().apply(CppUtilsPlugin.class);
+        project.getPlugins().apply(CLionRunConfigPlugin.class);
         project.getConfigurations().create(STATIC_LINKER);
 
         project.getExtensions().add("includedDeps", "");
@@ -53,20 +58,33 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
 
         project.afterEvaluate(p -> {
 
-            project.afterEvaluate(p2 -> {
-
-                //Generate include header
-                GeneratedHeaderHandler.generateHeaders(generatedHeaders, nativeProject);
-
-            });
-
             //Add custom BuildTools if defined
             NativeHelper.addBuildTools(project, nativeProject.getBuildToolsInstallDir().get());
 
+            CppUtilsPlugin.getBasePlugin(project).modifyComponentsDirect(new IComponentConfigurator<Object>() {
+
+                @Override
+                public void configureLibrary(Project project, CppLibrary component, Consumer<Runnable> callbacks, Object data) {
+                    if (nativeProject.getStaticRuntime().getOrElse(false)) {
+                        VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
+                    } else {
+                        VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
+                    }
+                }
+
+            }, null);
         });
 
         //Apply gradle native plugin
         project.getPluginManager().apply(getPluginType());
+
+        project.afterEvaluate(p -> {
+
+            //Generate include header
+            GeneratedHeaderHandler.generateHeaders(generatedHeaders, nativeProject);
+
+        });
+
     }
 
     protected abstract Class<?> getPluginType();
