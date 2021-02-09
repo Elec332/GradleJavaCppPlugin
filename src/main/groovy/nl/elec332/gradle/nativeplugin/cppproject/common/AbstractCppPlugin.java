@@ -65,10 +65,13 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
 
                 @Override
                 public void configureLibrary(Project project, CppLibrary component, Consumer<Runnable> callbacks, Object data) {
-                    if (nativeProject.getStaticRuntime().getOrElse(false)) {
-                        VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
-                    } else {
-                        VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
+                    if (component.getTargetMachines().get().stream().anyMatch(targetMachine -> targetMachine.getOperatingSystemFamily().isWindows())) {
+                        if (nativeProject.getStaticRuntime().getOrElse(false)) {
+                            VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
+                        } else {
+                            VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
+                        }
+                        TestIntegration.fixTestExecutable(project);
                     }
                 }
 

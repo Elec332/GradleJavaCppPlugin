@@ -37,6 +37,7 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
     @Override
     public void configureTestExecutableBinary(Project project, CppTestExecutable binary, NativeProjectExtension data) {
         NativeVariantHelper.modifyIncomingAttributes(project, binary, VariantConfigurator.SHARED_RUNTIME, !data.getStaticTestRuntime().get());
+        NativeVariantHelper.modifyIncomingAttributes(project, binary, VariantConfigurator.STATIC_RUNTIME, data.getStaticTestRuntime().get());
     }
 
     @Override
@@ -111,8 +112,7 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
         }
         if (binary.getToolChain() instanceof VisualCpp) {
             String arg = "-";
-            boolean staticRuntime = (boolean) Objects.requireNonNull(binary.getCompileTask().get().property(VariantConfigurator.STATIC_RUNTIME_NAME));
-            if (staticRuntime || (binary instanceof CppTestExecutable && extension.getStaticTestRuntime().get())) {
+            if (binary instanceof CppTestExecutable ? extension.getStaticTestRuntime().get() : (boolean) Objects.requireNonNull(binary.getCompileTask().get().property(VariantConfigurator.STATIC_RUNTIME_NAME))) {
                 arg += "MT";
             } else {
                 arg += "MD";
