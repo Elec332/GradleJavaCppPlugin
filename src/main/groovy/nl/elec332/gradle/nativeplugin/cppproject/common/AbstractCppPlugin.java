@@ -12,6 +12,7 @@ import nl.elec332.gradle.util.ProjectHelper;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.language.cpp.CppApplication;
 import org.gradle.language.cpp.CppLibrary;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 
@@ -71,7 +72,19 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
                         } else {
                             VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
                         }
-                        TestIntegration.fixTestExecutable(project);
+                        TestIntegration.fixTestExecutable(project, component);
+                    }
+                }
+
+                @Override
+                public void configureExecutable(Project project, CppApplication component, Consumer<Runnable> callbacks, Object data) {
+                    if (component.getTargetMachines().get().stream().anyMatch(targetMachine -> targetMachine.getOperatingSystemFamily().isWindows())) {
+                        if (nativeProject.getStaticRuntime().getOrElse(false)) {
+                            VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
+                        } else {
+                            VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
+                        }
+                        TestIntegration.fixTestExecutable(project, component);
                     }
                 }
 

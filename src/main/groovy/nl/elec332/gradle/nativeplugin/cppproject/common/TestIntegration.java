@@ -3,13 +3,20 @@ package nl.elec332.gradle.nativeplugin.cppproject.common;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.SelfResolvingDependency;
-import org.gradle.language.cpp.CppLibrary;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.internal.attributes.AttributeContainerInternal;
+import org.gradle.api.internal.attributes.AttributesSchemaInternal;
+import org.gradle.api.tasks.TaskProvider;
+import org.gradle.language.cpp.CppApplication;
+import org.gradle.language.cpp.CppComponent;
+import org.gradle.language.cpp.internal.DefaultCppBinary;
 import org.gradle.language.cpp.tasks.CppCompile;
+import org.gradle.language.nativeplatform.tasks.UnexportMainSymbol;
 import org.gradle.nativeplatform.test.cpp.CppTestSuite;
+import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestExecutable;
+import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestSuite;
 import org.gradle.nativeplatform.test.cpp.plugins.CppUnitTestPlugin;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -19,28 +26,40 @@ import java.util.Set;
 public class TestIntegration {
 
     @SuppressWarnings("all")
-    public static void fixTestExecutable(Project project) { //TODO: Restore my eyesight
-        if (project.getPlugins().hasPlugin(CppUnitTestPlugin.class)) {
-            Set<CppCompile> c = new HashSet<>();
-            project.getExtensions().getByType(CppLibrary.class).getBinaries().whenElementFinalized(b -> {
-                c.add(b.getCompileTask().get());
-            });
-            project.getExtensions().getByType(CppTestSuite.class).getBinaries().whenElementFinalized(b -> {
-                Configuration linkLibraries = (Configuration) project.getExtensions().getByType(CppTestSuite.class).getTestBinary().get().getLinkLibraries();
-                Configuration test = project.getConfigurations().create(linkLibraries.getName() + "Extended");
-                linkLibraries.extendsFrom(test);
-                boolean removed = false;
-                for (Dependency d : new ArrayList<>(linkLibraries.getDependencies())) {
-                    if (c.containsAll(((SelfResolvingDependency) d).getBuildDependencies().getDependencies(null))) {
-                        linkLibraries.getDependencies().remove(d);
-                        removed = true;
-                    }
-                }
-                if (removed) {
-                    project.getDependencies().add(test.getName(), project.getDependencies().create(project));
-                }
-            });
+    public static void fixTestExecutable(Project project, CppComponent component) { //TODO: Restore my eyesight (again)
+        if (!project.getPlugins().hasPlugin(CppUnitTestPlugin.class)) {
+            return;
         }
+        DefaultCppTestSuite testSuite = (DefaultCppTestSuite) project.getExtensions().getByType(CppTestSuite.class);
+        testSuite.getTestedComponent().convention((CppComponent) null);
+        Set<CppCompile> c = new HashSet<>();
+        component.getBinaries().whenElementFinalized(b -> {
+            c.add(b.getCompileTask().get());
+        });
+        testSuite.getBinaries().whenElementKnown(DefaultCppTestExecutable.class, (binary) -> {
+            binary.getImplementationDependencies().extendsFrom(component.getImplementationDependencies());
+        });
+        testSuite.getBinaries().whenElementFinalized(DefaultCppTestExecutable.class, (binary) -> {
+            testSuite.getTestedComponent().convention(component);
+            component.getBinaries().whenElementFinalized(testedBinary -> {
+                if (((AttributesSchemaInternal) project.getDependencies().getAttributesSchema()).matcher().isMatching((AttributeContainerInternal) binary.getLinkConfiguration().getAttributes(), (AttributeContainerInternal) ((Configuration) testedBinary.getLinkLibraries()).getAttributes())) {
+                    ConfigurableFileCollection testableObjects = project.getObjects().fileCollection();
+                    if (component instanceof CppApplication) {
+                        TaskProvider<UnexportMainSymbol> unexportMainSymbol = project.getTasks().register(binary.getNames().getTaskName("relocateMainFor"), UnexportMainSymbol.class, (task) -> {
+                            String dirName = ((DefaultCppBinary) testedBinary).getNames().getDirName();
+                            task.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("obj/for-test/" + dirName));
+                            task.getObjects().from(testedBinary.getObjects());
+                        });
+                        testableObjects.from(unexportMainSymbol.map(UnexportMainSymbol::getRelocatedObjects));
+                    } else {
+                        testableObjects.from(testedBinary.getObjects());
+                    }
+
+                    Dependency linkDependency = project.getDependencies().create(testableObjects);
+                    binary.getLinkConfiguration().getDependencies().add(linkDependency);
+                }
+            });
+        });
     }
 
 }

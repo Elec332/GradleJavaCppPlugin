@@ -17,7 +17,7 @@ import org.gradle.nativeplatform.tasks.LinkExecutable;
  * Created by Elec332 on 2/6/2021
  */
 @NonNullApi
-public class CLionRunConfigPlugin implements Plugin<Project>  {
+public class CLionRunConfigPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
@@ -38,7 +38,7 @@ public class CLionRunConfigPlugin implements Plugin<Project>  {
                         InstallExecutable installTask = ((ComponentWithInstallation) softwareComponent).getInstallTask().get();
                         LinkExecutable linkTask = ((ComponentWithExecutable) softwareComponent).getLinkTask().get();
                         installTask.getExecutableFile().set(linkTask.getLinkedFile());
-                        ((RegularFileProperty) ((ComponentWithExecutable) softwareComponent).getExecutableFile()).set(installTask.getInstalledExecutable().get());
+                        ((RegularFileProperty) ((ComponentWithExecutable) softwareComponent).getExecutableFile()).set(installTask.getRunScriptFile().get());
                         linkTask.finalizedBy(installTask);
                     }
                 });

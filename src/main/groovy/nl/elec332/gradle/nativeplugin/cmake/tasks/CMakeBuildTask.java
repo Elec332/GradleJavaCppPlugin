@@ -38,19 +38,19 @@ public class CMakeBuildTask extends DefaultTask {
     @TaskAction
     public void buildProject() {
         CMakeHelper.startCMake(getProject(), settings, spec -> {
-            spec.setWorkingDir(settings.getBuildDirectory());
+            spec.setWorkingDir(settings.getBuildDirectory().dir(buildType));
             spec.args("--build", ".");
             spec.args("--config", buildType.get());
             if (settings.getBuildTarget().isPresent()) {
                 spec.args("--target", settings.getBuildTarget().get());
             }
-        });
+        }).rethrowFailure();
     }
 
     public void usingSetup(CMakeSetupTask setup) {
         dependsOn(setup);
         cmakeFiles.setFrom(setup.getCmakeFiles());
-        outputDirectory.set(settings.getBuildDirectory());
+        outputDirectory.set(settings.getBuildDirectory().dir(buildType));
     }
 
     @InputFiles

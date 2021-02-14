@@ -12,6 +12,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
+import org.gradle.internal.os.OperatingSystem;
 import org.gradle.nativeplatform.toolchain.NativeToolChainRegistry;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
 import org.gradle.platform.base.ToolChain;
@@ -42,12 +43,13 @@ public class CMakeHelper {
     }
 
     public static void registerCMakeProject(Project project, ICMakeSettings settings, Configuration linkRelease, Configuration runtimeRelease, Configuration linkDebug, Configuration runtimeDebug) {
-        CMakeSetupTask setupTask = project.getTasks().create("setupCMake_" + settings.getName(), CMakeSetupTask.class, settings);
+        CMakeSetupTask setupTaskRelease = project.getTasks().create("setupCMakeRelease_" + settings.getName(), CMakeSetupTask.class, settings, settings.getReleaseBuildType());
         CMakeBuildTask buildTaskRelease = project.getTasks().create("buildCMakeRelease_" + settings.getName(), CMakeBuildTask.class, settings, settings.getReleaseBuildType());
-        buildTaskRelease.usingSetup(setupTask);
+        buildTaskRelease.usingSetup(setupTaskRelease);
+        CMakeSetupTask setupTaskDebug = project.getTasks().create("setupCMakeDebug_" + settings.getName(), CMakeSetupTask.class, settings, settings.getDebugBuildType());
         CMakeBuildTask buildTaskDebug = project.getTasks().create("buildCMakeDebug_" + settings.getName(), CMakeBuildTask.class, settings, settings.getDebugBuildType());
-        buildTaskDebug.usingSetup(setupTask);
-        project.afterEvaluate(p -> configureBinaries(settings));
+        buildTaskDebug.usingSetup(setupTaskDebug);
+        project.afterEvaluate(p -> configureBinaries(project, settings));
         project.getTasks().getByName("build").dependsOn(buildTaskRelease);
         project.afterEvaluate(p -> {
             registerArtifacts(project, settings.getReleaseBuildType(), settings.getReleaseLinkerBinaries(), linkRelease, buildTaskRelease);
@@ -68,13 +70,14 @@ public class CMakeHelper {
     public static void registerCMakeDependency(Project project, String name, Action<? super ICMakeSettings> modifier) {
         ICMakeSettings settings = newSettings(project, name, null);
         modifier.execute(settings);
-        CMakeSetupTask setupTask = project.getTasks().create("setupCMake_" + settings.getName(), CMakeSetupTask.class, settings);
+        CMakeSetupTask setupTaskRelease = project.getTasks().create("setupCMakeRelease_" + settings.getName(), CMakeSetupTask.class, settings, settings.getReleaseBuildType());
         CMakeBuildTask buildTaskRelease = project.getTasks().create("buildCMakeRelease_" + settings.getName(), CMakeBuildTask.class, settings, settings.getReleaseBuildType());
-        buildTaskRelease.usingSetup(setupTask);
+        buildTaskRelease.usingSetup(setupTaskRelease);
+        CMakeSetupTask setupTaskDebug = project.getTasks().create("setupCMakeDebug_" + settings.getName(), CMakeSetupTask.class, settings, settings.getDebugBuildType());
         CMakeBuildTask buildTaskDebug = project.getTasks().create("buildCMakeDebug_" + settings.getName(), CMakeBuildTask.class, settings, settings.getDebugBuildType());
-        buildTaskDebug.usingSetup(setupTask);
+        buildTaskDebug.usingSetup(setupTaskDebug);
 
-        project.afterEvaluate(p -> configureBinaries(settings));
+        project.afterEvaluate(p -> configureBinaries(project, settings));
 
         ConfigurableFileCollection headers = project.files(settings.getIncludeDirectory());
         project.getDependencies().add(CppUtilsPlugin.HEADERS, headers);
@@ -82,54 +85,83 @@ public class CMakeHelper {
         project.getDependencies().add(CppUtilsPlugin.RUNTIME_RELEASE, settings.getReleaseRuntimeBinaries());
         project.getDependencies().add(CppUtilsPlugin.LINKER_DEBUG, settings.getDebugLinkerBinaries());
         project.getDependencies().add(CppUtilsPlugin.RUNTIME_DEBUG, settings.getDebugRuntimeBinaries());
-        headers.builtBy(setupTask);
+        headers.builtBy(setupTaskRelease);
         settings.getReleaseLinkerBinaries().builtBy(buildTaskRelease);
         settings.getReleaseRuntimeBinaries().builtBy(buildTaskRelease);
         settings.getDebugLinkerBinaries().builtBy(buildTaskDebug);
         settings.getDebugRuntimeBinaries().builtBy(buildTaskDebug);
     }
 
-    private static void configureBinaries(ICMakeSettings settings) {
-        configureOne(settings, settings.getReleaseLinkerBinaries(), settings.getLinkerBinaries(), settings.getReleaseBuildType());
-        configureOne(settings, settings.getReleaseRuntimeBinaries(), settings.getRuntimeBinaries(), settings.getReleaseBuildType());
-        configureOne(settings, settings.getDebugLinkerBinaries(), settings.getLinkerBinaries(), settings.getDebugBuildType());
-        configureOne(settings, settings.getDebugRuntimeBinaries(), settings.getRuntimeBinaries(), settings.getDebugBuildType());
+    private static void configureBinaries(Project project, ICMakeSettings settings) {
+        configureOne(project, settings, settings.getReleaseLinkerBinaries(), settings.getLinkerBinaries(), settings.getReleaseBuildType(), false);
+        configureOne(project, settings, settings.getReleaseRuntimeBinaries(), settings.getRuntimeBinaries(), settings.getReleaseBuildType(), true);
+        configureOne(project, settings, settings.getDebugLinkerBinaries(), settings.getLinkerBinaries(), settings.getDebugBuildType(), false);
+        configureOne(project, settings, settings.getDebugRuntimeBinaries(), settings.getRuntimeBinaries(), settings.getDebugBuildType(), true);
     }
 
-    private static void configureOne(ICMakeSettings settings, ConfigurableFileCollection binaries, SetProperty<String> includer, Property<String> buildType) {
-        if (binaries.isEmpty() || includer.isPresent()) {
-
-            //TODO: SetProperties are always present, fix or report to gradle...
-            Collection<String> extra;
-            if (binaries.isEmpty()) {
-                if (includer.isPresent() && !includer.get().isEmpty()) {
-                    extra = includer.get();
+    private static void configureOne(Project project, ICMakeSettings settings, ConfigurableFileCollection binaries, SetProperty<String> includer, Property<String> buildType, boolean runtime) {
+        boolean multiBuild = getVCPPInstallDir(project) != null;
+        for (String s : includer.getOrElse(Collections.emptySet())) {
+            String[] split = s.split(":");
+            String file;
+            String folder = null;
+            if (split.length == 2) {
+                OperatingSystem os = OperatingSystem.current();
+                if (split[0].equals("static")) {
+                    if (runtime) {
+                        continue;
+                    } else {
+                        folder = "lib";
+                        file = os.getStaticLibraryName(split[1]);
+                    }
+                } else if (split[1].equals("shared")) {
+                    if (runtime) {
+                        file = os.getSharedLibraryName(split[1]);
+                    } else {
+                        file = os.getLinkLibraryName(split[1]);
+                    }
                 } else {
-                    extra = Collections.singleton("*.*");
+                    throw new UnsupportedOperationException(split[0]);
                 }
-            } else if (includer.isPresent()) {
-                extra = includer.get();
             } else {
-                extra = Collections.emptyList();
+                file = s;
             }
-
-            //Collection<String> extra = includer.isPresent() ? includer.get() : Collections.singleton("*.*");
-            extra.forEach(s -> binaries.from(settings.getBuildDirectory().dir("lib/" + buildType.get()).get().getAsFile().getAbsolutePath() + "/" + s));
+            if (folder == null) {
+                if (runtime) {
+                    folder = "lib";
+                } else {
+                    folder = "bin";
+                }
+            }
+            if (multiBuild) {
+                folder += "/" + buildType.get();
+            }
+            binaries.from(settings.getBuildDirectory().dir(buildType.get() + "/" + folder).get().file(file));
         }
     }
 
     @SuppressWarnings("UnstableApiUsage")
+    private static File getVCPPInstallDir(Project project) {
+        NativeToolChainRegistry registry = Utils.realizeToolChainRegistry(project);
+        for (ToolChain toolChain : registry) {
+            if (toolChain instanceof VisualCpp) {
+                File installDir = ((VisualCpp) toolChain).getInstallDir();
+                if (installDir != null) {
+                    return new File(installDir, "Common7/Tools/VsDevCmd.bat");
+                }
+            }
+        }
+        return null;
+    }
+
     public static ExecResult startCMake(Project project, ICMakeSettings settings, Action<? super ExecSpec> action) {
         String s = settings.getExecutable().getOrElse(NO_CMAKE);
-        NativeToolChainRegistry registry = Utils.realizeToolChainRegistry(project);
+
         List<String> cmdLine = new ArrayList<>();
         if (s.equals(NO_CMAKE)) {
-            for (ToolChain toolChain : registry) {
-                if (toolChain instanceof VisualCpp) {
-                    String path = new File(((VisualCpp) toolChain).getInstallDir(), "Common7/Tools/VsDevCmd.bat").getAbsolutePath();
-                    cmdLine.addAll(Arrays.asList("cmd", "/c", path, "&"));
-                    break;
-                }
+            File installDir = getVCPPInstallDir(project);
+            if (installDir != null) {
+                cmdLine.addAll(Arrays.asList("cmd", "/c", installDir.getAbsolutePath(), "&"));
             }
             cmdLine.add("cmake");
         } else {

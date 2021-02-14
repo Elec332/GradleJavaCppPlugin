@@ -37,7 +37,7 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     private final Map<IComponentConfigurator<?>, Object> componentConfigurators = new LinkedHashMap<>();
     private final Map<IBinaryConfigurator<Object>, Object> binaryConfigurators = new LinkedHashMap<>();
     private final Set<Action<? super CppCompile>> compilerMods = new LinkedHashSet<>();
-    private Map<Object, Set<Runnable>> callbacks = new WeakHashMap<>();
+    private final Map<Object, Set<Runnable>> callbacks = new WeakHashMap<>();
     private Project project;
     private boolean cpmLock = false;
 
@@ -57,40 +57,40 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
         project.getConfigurations().create(RUNTIME_RELEASE).extendsFrom(runtime);
         project.getConfigurations().create(RUNTIME_DEBUG).extendsFrom(runtime);
 
+        //Run binary modifiers
+        modifyBinaries(project, binary -> {
+
+            binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set("isStatic", binary instanceof CppStaticLibrary);
+
+            binaryConfigurators.forEach((configurator, data) -> configurator.configureBinary(project, binary, data));
+            if (binary instanceof CppStaticLibrary) {
+                CppStaticLibrary lib = (CppStaticLibrary) binary;
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureStaticLibraryBinary(project, lib, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureLibraryBinary(project, lib, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableBinary(project, lib, data));
+            } else if (binary instanceof CppSharedLibrary) {
+                CppSharedLibrary lib = (CppSharedLibrary) binary;
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureSharedLibraryBinary(project, lib, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureLibraryBinary(project, lib, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableBinary(project, lib, data));
+            } else if (binary instanceof CppExecutable) {
+                CppExecutable executable = (CppExecutable) binary;
+                binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableExecutableBinary(project, executable, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureExecutableBinary(project, executable, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableBinary(project, executable, data));
+            } else if (binary instanceof CppTestExecutable) {
+                CppTestExecutable executable = (CppTestExecutable) binary;
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureTestExecutableBinary(project, executable, data));
+                binaryConfigurators.forEach((configurator, data) -> configurator.configureExecutableBinary(project, executable, data));
+            } else {
+                throw new UnsupportedOperationException("Unknown library type: " + binary.getClass());
+            }
+        });
+
         project.afterEvaluate(p -> {
 
             //Run component modifiers
             modifyComponents(componentConfigurators);
-
-            //Run binary modifiers
-            modifyBinaries(project, binary -> {
-
-                binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set("isStatic", binary instanceof CppStaticLibrary);
-
-                binaryConfigurators.forEach((configurator, data) -> configurator.configureBinary(project, binary, data));
-                if (binary instanceof CppStaticLibrary) {
-                    CppStaticLibrary lib = (CppStaticLibrary) binary;
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureStaticLibraryBinary(project, lib, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureLibraryBinary(project, lib, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableBinary(project, lib, data));
-                } else if (binary instanceof CppSharedLibrary) {
-                    CppSharedLibrary lib = (CppSharedLibrary) binary;
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureSharedLibraryBinary(project, lib, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureLibraryBinary(project, lib, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableBinary(project, lib, data));
-                } else if (binary instanceof CppExecutable) {
-                    CppExecutable executable = (CppExecutable) binary;
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableExecutableBinary(project, executable, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureExecutableBinary(project, executable, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configurePublishableBinary(project, executable, data));
-                } else if (binary instanceof CppTestExecutable) {
-                    CppTestExecutable executable = (CppTestExecutable) binary;
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureTestExecutableBinary(project, executable, data));
-                    binaryConfigurators.forEach((configurator, data) -> configurator.configureExecutableBinary(project, executable, data));
-                } else {
-                    throw new UnsupportedOperationException("Unknown library type: " + binary.getClass());
-                }
-            });
 
             project.afterEvaluate(p2 -> {
 
@@ -114,7 +114,7 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     }
 
     private void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
-        project.getComponents().forEach(component -> {
+        project.getComponents().whenObjectAdded(component -> {
             if (component instanceof ComponentWithBinaries) {
                 ((ComponentWithBinaries) component).getBinaries().whenElementFinalized(binary -> {
                     Set<Runnable> callbacks = this.callbacks.getOrDefault(component, Collections.emptySet());

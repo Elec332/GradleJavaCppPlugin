@@ -10,6 +10,8 @@ import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.language.cpp.CppBinary;
 import org.gradle.language.cpp.CppSharedLibrary;
 import org.gradle.language.cpp.tasks.CppCompile;
+import org.gradle.language.nativeplatform.ComponentWithExecutable;
+import org.gradle.language.nativeplatform.ComponentWithInstallation;
 import org.gradle.nativeplatform.tasks.AbstractLinkTask;
 import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
 import org.gradle.nativeplatform.toolchain.VisualCpp;
@@ -38,6 +40,11 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
     public void configureTestExecutableBinary(Project project, CppTestExecutable binary, NativeProjectExtension data) {
         NativeVariantHelper.modifyIncomingAttributes(project, binary, VariantConfigurator.SHARED_RUNTIME, !data.getStaticTestRuntime().get());
         NativeVariantHelper.modifyIncomingAttributes(project, binary, VariantConfigurator.STATIC_RUNTIME, data.getStaticTestRuntime().get());
+    }
+
+    @Override
+    public <B extends CppBinary & ComponentWithExecutable & ComponentWithInstallation> void configureExecutableBinary(Project project, B binary, NativeProjectExtension data) {
+        addDependencies(binary, binary.getLinkTask().get(), data);
     }
 
     @Override
@@ -89,6 +96,9 @@ public class BinaryConfigurator implements IBinaryConfigurator<NativeProjectExte
     }
 
     private static void setAttributes(Project project, CppBinary binary, NativeProjectExtension data) {
+        if (!binary.getTargetMachine().getOperatingSystemFamily().isWindows()) {
+            return;
+        }
         CppCompile compileTask = binary.getCompileTask().get();
         boolean staticRuntime = data.getStaticRuntime().getOrElse(false);
 

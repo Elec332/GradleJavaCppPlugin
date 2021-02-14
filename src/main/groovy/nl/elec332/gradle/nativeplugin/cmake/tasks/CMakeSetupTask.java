@@ -5,6 +5,7 @@ import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFiles;
 import org.gradle.api.tasks.TaskAction;
@@ -17,18 +18,22 @@ import javax.inject.Inject;
 public class CMakeSetupTask extends DefaultTask {
 
     @Inject
-    public CMakeSetupTask(ICMakeSettings settings) {
+    public CMakeSetupTask(ICMakeSettings settings, Property<String> buildType) {
         this.settings = settings;
+        this.buildType = buildType;
     }
 
     private final ICMakeSettings settings;
+    private final Property<String> buildType;
     private FileCollection cmakeLists;
     private FileCollection cmakeFiles;
 
     @TaskAction
     public void setupCMakeFiles() {
         CMakeHelper.startCMake(getProject(), settings, spec -> {
-            spec.setWorkingDir(settings.getBuildDirectory());
+            spec.setWorkingDir(settings.getBuildDirectory().dir(buildType));
+            spec.getWorkingDir().mkdirs();
+
             settings.getVariables().get().forEach((nam, arg) -> {
                 spec.args("-D" + nam + "=" + arg);
             });
@@ -38,11 +43,12 @@ public class CMakeSetupTask extends DefaultTask {
             if (settings.getBuildStaticLibs().isPresent()) {
                 spec.args("-DBUILD_STATIC_LIBS=" + (settings.getBuildStaticLibs().get() ? "ON" : "OFF"));
             }
+            spec.args("-DCMAKE_BUILD_TYPE=" + buildType.get());
 
             spec.args("--no-warn-unused-cli");
 
             spec.args(settings.getProjectDirectory().getAsFile().get().getAbsolutePath());
-        });
+        }).rethrowFailure();
     }
 
     @InputFiles

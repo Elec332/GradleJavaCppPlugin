@@ -4,6 +4,7 @@ import nl.elec332.gradle.nativeplugin.util.NativeVariantHelper;
 import org.gradle.api.Project;
 import org.gradle.api.attributes.Attribute;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
+import org.gradle.language.cpp.CppApplication;
 import org.gradle.language.cpp.CppLibrary;
 
 import java.util.function.Consumer;
@@ -27,6 +28,20 @@ public class VariantConfigurator {
 
     public static void addStaticRuntimeVariant(Project project, CppLibrary component, Consumer<Runnable> callbacks) {
         NativeVariantHelper.addLibraryVariant("StaticRuntime", "-MT", project, component, binary -> {
+            NativeVariantHelper.modifyOutgoingAttributes(project, binary, STATIC_RUNTIME, true);
+            callbacks.accept(() -> binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set(STATIC_RUNTIME_NAME, true));
+        });
+    }
+
+    public static void addSharedRuntimeVariant(Project project, CppApplication component, Consumer<Runnable> callbacks) {
+        NativeVariantHelper.addExecutableVariant("SharedRuntime", "-MD", project, component, binary -> {
+            NativeVariantHelper.modifyOutgoingAttributes(project, binary, STATIC_RUNTIME, false);
+            callbacks.accept(() -> binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set(STATIC_RUNTIME_NAME, false));
+        });
+    }
+
+    public static void addStaticRuntimeVariant(Project project, CppApplication component, Consumer<Runnable> callbacks) {
+        NativeVariantHelper.addExecutableVariant("StaticRuntime", "-MT", project, component, binary -> {
             NativeVariantHelper.modifyOutgoingAttributes(project, binary, STATIC_RUNTIME, true);
             callbacks.accept(() -> binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set(STATIC_RUNTIME_NAME, true));
         });
