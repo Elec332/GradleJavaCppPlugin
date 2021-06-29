@@ -10,15 +10,11 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.cpp.CppApplication;
 import org.gradle.language.cpp.CppComponent;
 import org.gradle.language.cpp.internal.DefaultCppBinary;
-import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.language.nativeplatform.tasks.UnexportMainSymbol;
 import org.gradle.nativeplatform.test.cpp.CppTestSuite;
 import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestExecutable;
 import org.gradle.nativeplatform.test.cpp.internal.DefaultCppTestSuite;
 import org.gradle.nativeplatform.test.cpp.plugins.CppUnitTestPlugin;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Created by Elec332 on 2/9/2021
@@ -32,15 +28,10 @@ public class TestIntegration {
         }
         DefaultCppTestSuite testSuite = (DefaultCppTestSuite) project.getExtensions().getByType(CppTestSuite.class);
         testSuite.getTestedComponent().convention((CppComponent) null);
-        Set<CppCompile> c = new HashSet<>();
-        component.getBinaries().whenElementFinalized(b -> {
-            c.add(b.getCompileTask().get());
-        });
         testSuite.getBinaries().whenElementKnown(DefaultCppTestExecutable.class, (binary) -> {
             binary.getImplementationDependencies().extendsFrom(component.getImplementationDependencies());
         });
         testSuite.getBinaries().whenElementFinalized(DefaultCppTestExecutable.class, (binary) -> {
-            testSuite.getTestedComponent().convention(component);
             component.getBinaries().whenElementFinalized(testedBinary -> {
                 if (((AttributesSchemaInternal) project.getDependencies().getAttributesSchema()).matcher().isMatching((AttributeContainerInternal) binary.getLinkConfiguration().getAttributes(), (AttributeContainerInternal) ((Configuration) testedBinary.getLinkLibraries()).getAttributes())) {
                     ConfigurableFileCollection testableObjects = project.getObjects().fileCollection();
@@ -54,11 +45,13 @@ public class TestIntegration {
                     } else {
                         testableObjects.from(testedBinary.getObjects());
                     }
+                    //binary.getImplementationDependencies().extendsFrom(((DefaultCppBinary) testedBinary).getImplementationDependencies());
 
                     Dependency linkDependency = project.getDependencies().create(testableObjects);
                     binary.getLinkConfiguration().getDependencies().add(linkDependency);
                 }
             });
+            testSuite.getTestedComponent().convention(component);
         });
     }
 

@@ -5,6 +5,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
 import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.nativeplatform.Linkage;
+import org.gradle.nativeplatform.tasks.LinkExecutable;
 
 /**
  * Created by Elec332 on 28-12-2020
@@ -25,7 +26,11 @@ public interface INativeProjectExtension {
 
     void modifyCompiler(Action<? super CppCompile> action);
 
+    void modifyLinker(Action<? super LinkExecutable> action);
+
     Property<Boolean> getGenerateExportHeader();
+
+    Property<Boolean> getSingleRuntimeType();
 
     Property<Boolean> getStaticRuntime();
 

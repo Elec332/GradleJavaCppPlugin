@@ -36,6 +36,12 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
         File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
         NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project, generatedHeaders);
 
+        project.afterEvaluate(p -> {
+
+            //Add custom BuildTools if defined
+            NativeHelper.addBuildTools(project, nativeProject.getBuildToolsInstallDir().get());
+        });
+
         project.getPlugins().apply(CppUtilsPlugin.class);
         project.getPlugins().apply(CLionRunConfigPlugin.class);
         project.getConfigurations().create(STATIC_LINKER);
@@ -57,39 +63,33 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
         CppUtilsPlugin.getBasePlugin(project).addBinaryConfigurator(new BinaryConfigurator(), nativeProject);
         CppUtilsPlugin.getBasePlugin(project).addComponentConfigurator(new ComponentConfigurator(), nativeProject);
 
-        project.afterEvaluate(p -> {
+        CppUtilsPlugin.getBasePlugin(project).addComponentConfigurator(new IComponentConfigurator<Object>() {
 
-            //Add custom BuildTools if defined
-            NativeHelper.addBuildTools(project, nativeProject.getBuildToolsInstallDir().get());
-
-            CppUtilsPlugin.getBasePlugin(project).modifyComponentsDirect(new IComponentConfigurator<Object>() {
-
-                @Override
-                public void configureLibrary(Project project, CppLibrary component, Consumer<Runnable> callbacks, Object data) {
-                    if (component.getTargetMachines().get().stream().anyMatch(targetMachine -> targetMachine.getOperatingSystemFamily().isWindows())) {
-                        if (nativeProject.getStaticRuntime().getOrElse(false)) {
-                            VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
-                        } else {
-                            VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
-                        }
-                        TestIntegration.fixTestExecutable(project, component);
+            @Override
+            public void configureLibrary(Project project, CppLibrary component, Consumer<Runnable> callbacks, Object data) {
+                if (!nativeProject.getSingleRuntimeType().get() && component.getTargetMachines().get().stream().anyMatch(targetMachine -> targetMachine.getOperatingSystemFamily().isWindows())) {
+                    if (nativeProject.getStaticRuntime().getOrElse(false)) {
+                        VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
+                    } else {
+                        VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
                     }
+                    TestIntegration.fixTestExecutable(project, component);
                 }
+            }
 
-                @Override
-                public void configureExecutable(Project project, CppApplication component, Consumer<Runnable> callbacks, Object data) {
-                    if (component.getTargetMachines().get().stream().anyMatch(targetMachine -> targetMachine.getOperatingSystemFamily().isWindows())) {
-                        if (nativeProject.getStaticRuntime().getOrElse(false)) {
-                            VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
-                        } else {
-                            VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
-                        }
-                        TestIntegration.fixTestExecutable(project, component);
+            @Override
+            public void configureExecutable(Project project, CppApplication component, Consumer<Runnable> callbacks, Object data) {
+                if (!nativeProject.getSingleRuntimeType().get() && component.getTargetMachines().get().stream().anyMatch(targetMachine -> targetMachine.getOperatingSystemFamily().isWindows())) {
+                    if (nativeProject.getStaticRuntime().getOrElse(false)) {
+                        VariantConfigurator.addSharedRuntimeVariant(project, component, callbacks);
+                    } else {
+                        VariantConfigurator.addStaticRuntimeVariant(project, component, callbacks);
                     }
+                    TestIntegration.fixTestExecutable(project, component);
                 }
+            }
 
-            }, null);
-        });
+        }, null);
 
         //Apply gradle native plugin
         project.getPluginManager().apply(getPluginType());

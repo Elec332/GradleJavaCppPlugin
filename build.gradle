@@ -2,6 +2,7 @@ plugins {
     id 'java-gradle-plugin'
     id 'groovy'
     id "com.gradle.plugin-publish" version "0.11.0"
+    id "com.github.johnrengelman.shadow" version "7.0.0"
 }
 
 group 'nl.elec332.gradle'
@@ -13,9 +14,25 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation "nl.elec332.lib:gradle-utils:1.0.2-Beta"
+configurations {
+    merge
+    compileOnly.extendsFrom(merge)
 }
+
+dependencies {
+    merge "nl.elec332.lib:gradle-utils:1.0.3-Beta"
+    compileOnly gradleApi()
+}
+
+shadowJar {
+    setConfigurations Arrays.asList(project.configurations.merge)
+    minimize()
+    archiveClassifier = ""
+    relocate "nl.elec332.gradle.util", "gnp.embed.nl.elec332.gradle.util"
+}
+
+tasks.jar.dependsOn(shadowJar)
+tasks.jar.enabled = false
 
 gradlePlugin {
 
@@ -42,7 +59,13 @@ gradlePlugin {
             id = 'nl.elec332.gradle.cmake'
             implementationClass = 'nl.elec332.gradle.nativeplugin.cmake.CMakeProjectPlugin'
             displayName = 'Gradle CMake Project Plugin'
-            description = "A Gradle plugin to wrap CMake projects as a Grdale project"
+            description = "A Gradle plugin to wrap CMake projects as a Gradle project"
+        }
+        javaCppPlugin {
+            id = 'nl.elec332.gradle.javacpp'
+            implementationClass = 'nl.elec332.gradle.nativeplugin.javacpp.JavaCppPlugin'
+            displayName = 'Gradle JavaCpp Project Plugin'
+            description = "A Gradle plugin to create JavaCpp projects with gradle"
         }
     }
 

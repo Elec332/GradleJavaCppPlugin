@@ -12,6 +12,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
 import org.gradle.language.cpp.tasks.CppCompile;
 import org.gradle.nativeplatform.Linkage;
+import org.gradle.nativeplatform.tasks.LinkExecutable;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -39,6 +40,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
         minimizeSize = objectFactory.property(Boolean.class);
         generateExportHeader = objectFactory.property(Boolean.class);
         staticTestRuntime = objectFactory.property(Boolean.class);
+        singleRuntimeType = objectFactory.property(Boolean.class);
 
         linkage.set(Collections.singletonList(Linkage.SHARED));
         btInstDir.set("");
@@ -48,6 +50,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
         minimizeSize.set(false);
         generateExportHeader.set(false);
         staticTestRuntime.set(true);
+        singleRuntimeType.set(false);
     }
 
     private final Project project;
@@ -64,6 +67,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
     private final Property<Boolean> minimizeSize;
     private final Property<Boolean> generateExportHeader;
     private final Property<Boolean> staticTestRuntime;
+    private final Property<Boolean> singleRuntimeType;
 
     @Override
     public SetProperty<Linkage> getLinkage() {
@@ -99,8 +103,14 @@ public class NativeProjectExtension implements INativeProjectExtension {
 
     @Override
     public void modifyCompiler(Action<? super CppCompile> action) {
-        CppUtilsPlugin.getBasePlugin(project).modifyCompiler(action);
+        CppUtilsPlugin.getBasePlugin(project).modifyCompilers(action);
     }
+
+    @Override
+    public void modifyLinker(Action<? super LinkExecutable> action) {
+        CppUtilsPlugin.getBasePlugin(project).modifyLinkers(action);
+    }
+
 
     @Override
     public SetProperty<String> getTestArguments() {
@@ -113,6 +123,11 @@ public class NativeProjectExtension implements INativeProjectExtension {
     @Override
     public Property<Boolean> getGenerateExportHeader() {
         return this.generateExportHeader;
+    }
+
+    @Override
+    public Property<Boolean> getSingleRuntimeType() {
+        return this.singleRuntimeType;
     }
 
     @Override

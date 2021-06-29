@@ -2,6 +2,8 @@ package nl.elec332.gradle.nativeplugin.base;
 
 import nl.elec332.gradle.nativeplugin.util.Constants;
 import nl.elec332.gradle.util.PluginHelper;
+import nl.elec332.gradle.util.ProjectHelper;
+import nl.elec332.gradle.util.internal.GradleCoreInternals;
 import org.gradle.api.Action;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
@@ -11,6 +13,7 @@ import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.language.ComponentWithBinaries;
 import org.gradle.language.cpp.*;
 import org.gradle.language.cpp.tasks.CppCompile;
+import org.gradle.nativeplatform.tasks.LinkExecutable;
 import org.gradle.nativeplatform.test.cpp.CppTestExecutable;
 
 import java.util.*;
@@ -25,21 +28,28 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     public static final String HEADERS = "headers";
     public static final String WINDOWS_HEADERS = "windowsHeaders";
 
-    public static final String LINKER = "linker";
-    public static final String RUNTIME = "runtime";
+    private static final String LINK = "link";
+    public static final String LINKER = LINK + "er";
+    public static final String RUNTIME = "cppRuntime";
 
-    public static final String LINKER_RELEASE = "linkRelease";
-    public static final String RUNTIME_RELEASE = "runtimeRelease";
-    public static final String LINKER_DEBUG = "linkDebug";
-    public static final String RUNTIME_DEBUG = "runtimeDebug";
+    public static final String LINKER_RELEASE = LINK + "Release";
+    public static final String RUNTIME_RELEASE = RUNTIME + "Release";
+    public static final String LINKER_DEBUG = LINK + "Debug";
+    public static final String RUNTIME_DEBUG = RUNTIME + "Debug";
 
 
     private final Map<IComponentConfigurator<?>, Object> componentConfigurators = new LinkedHashMap<>();
     private final Map<IBinaryConfigurator<Object>, Object> binaryConfigurators = new LinkedHashMap<>();
     private final Set<Action<? super CppCompile>> compilerMods = new LinkedHashSet<>();
+    private final Set<Action<? super CppComponent>> componentMods = new LinkedHashSet<>();
+    private final Set<Action<? super CppBinary>> binaryMods = new LinkedHashSet<>();
     private final Map<Object, Set<Runnable>> callbacks = new WeakHashMap<>();
     private Project project;
     private boolean cpmLock = false;
+
+
+    private final Set<Action<? super LinkExecutable>> linkerMods = new LinkedHashSet<>();
+    private boolean cplLock = false;
 
     @Override
     public void apply(Project project) {
@@ -57,11 +67,15 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
         project.getConfigurations().create(RUNTIME_RELEASE).extendsFrom(runtime);
         project.getConfigurations().create(RUNTIME_DEBUG).extendsFrom(runtime);
 
+        ((ExtraPropertiesExtension) project.getExtensions().getByName(ExtraPropertiesExtension.EXTENSION_NAME)).set("os", GradleCoreInternals.getCurrentOs());
+
         //Run binary modifiers
         modifyBinaries(project, binary -> {
 
             binary.getCompileTask().get().getExtensions().getByType(ExtraPropertiesExtension.class).set("isStatic", binary instanceof CppStaticLibrary);
-
+            binary.getCompileTask().get().source(project.fileTree(ProjectHelper.getDefaultMainSourceFolderPath(project) + "/cpp", f -> f.include("**/*.c")));
+            //((CppComponent) softwareComponent).getSource().from(project.fileTree(ProjectHelper.getDefaultMainSourceFolderPath(project) + "/c", f -> f.include("**/*.c")));
+            binaryMods.forEach(a -> a.execute(binary));
             binaryConfigurators.forEach((configurator, data) -> configurator.configureBinary(project, binary, data));
             if (binary instanceof CppStaticLibrary) {
                 CppStaticLibrary lib = (CppStaticLibrary) binary;
@@ -100,17 +114,16 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
                     compilerMods.forEach(a -> a.execute(c));
                 });
 
+                //Run compiler modifiers
+                project.getTasks().withType(LinkExecutable.class).configureEach(c -> {
+                    cplLock = true;
+                    linkerMods.forEach(a -> a.execute(c));
+                });
+
             });
         });
 
-        addBinaryConfigurator(new IBinaryConfigurator<Object>() {
-
-            @Override
-            public void configureBinary(Project project, CppBinary binary, Object data) {
-                mergeConfigurations(project, binary);
-            }
-
-        }, null);
+        modifyBinaries(binary -> mergeConfigurations(project, binary));
     }
 
     private void modifyBinaries(Project project, Consumer<CppBinary> consumer) {
@@ -134,6 +147,8 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
         project.getComponents().forEach(softwareComponent -> {
             Set<Runnable> callbacks = this.callbacks.computeIfAbsent(softwareComponent, o -> new HashSet<>());
             if (softwareComponent instanceof CppComponent) {
+                componentMods.forEach(a -> a.execute((CppComponent) softwareComponent));
+                componentMods.clear();
                 componentConfigurators.forEach((configurator, data) -> configurator.configureComponent(project, (CppComponent) softwareComponent, callbacks::add, data));
                 if (softwareComponent instanceof CppLibrary) {
                     componentConfigurators.forEach((configurator, data) -> configurator.configureLibrary(project, (CppLibrary) softwareComponent, callbacks::add, data));
@@ -193,11 +208,31 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     }
 
     @Override
-    public void modifyCompiler(Action<? super CppCompile> action) {
+    public void modifyCompilers(Action<? super CppCompile> action) {
         if (cpmLock) {
             project.getTasks().withType(CppCompile.class).configureEach(action);
             return;
         }
         compilerMods.add(action);
     }
+
+    @Override
+    public void modifyLinkers(Action<? super LinkExecutable> action) {
+        if (cplLock) {
+            project.getTasks().withType(LinkExecutable.class).configureEach(action);
+            return;
+        }
+        linkerMods.add(action);
+    }
+
+    @Override
+    public void modifyComponents(Action<? super CppComponent> action) {
+        componentMods.add(action);
+    }
+
+    @Override
+    public void modifyBinaries(Action<? super CppBinary> action) {
+        binaryMods.add(action);
+    }
+
 }

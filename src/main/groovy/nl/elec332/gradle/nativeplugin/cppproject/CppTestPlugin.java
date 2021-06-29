@@ -29,7 +29,6 @@ public class CppTestPlugin implements Plugin<Project> {
                 project.getExtensions().getByType(CppTestSuite.class).getTestBinary().flatMap(CppTestExecutable::getRunTask).get().args(extension.getTestArguments().getOrElse(Collections.emptySet()));
             }
         });
-
     }
 
 }

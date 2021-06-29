@@ -1,1 +1,4 @@
 rootProject.name = 'NativePlugin'
+
+include ":Gradle-Utils"
+project(":Gradle-Utils").projectDir = new File("D:/Programming/Github/Java/Gradle/Gradle-Utils")
