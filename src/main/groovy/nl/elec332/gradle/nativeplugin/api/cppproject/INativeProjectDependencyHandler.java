@@ -27,4 +27,8 @@ public interface INativeProjectDependencyHandler {
 
     void cmakeDependency(String name, Action<? super ICMakeSettings> modifier);
 
+    void projectDependency(String project);
+
+    void projectApiDependency(String project);
+
 }

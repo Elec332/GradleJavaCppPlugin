@@ -7,7 +7,9 @@ import nl.elec332.gradle.nativeplugin.cmake.util.CMakeHelper;
 import nl.elec332.gradle.nativeplugin.cppproject.common.AbstractCppPlugin;
 import nl.elec332.gradle.nativeplugin.util.Constants;
 import org.gradle.api.Action;
+import org.gradle.api.InvalidUserCodeException;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.SetProperty;
 import org.gradle.internal.metaobject.MethodAccess;
@@ -35,6 +37,12 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
 
         this.winInc.set(Constants.WINDOWS_INCLUDES);
         this.linInc.set(Constants.LINUX_INCLUDES);
+
+        this.project.afterEvaluate(a -> {
+            rs.forEach(Runnable::run);
+            rs = null;
+        });
+        this.rs = new HashSet<>();
     }
 
     private static final Collection<String> allowedConfigs = Arrays.asList("implementation", "testImplementation",
@@ -48,6 +56,7 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
     private final SetProperty<String> winInc;
     private final SetProperty<String> linInc;
     private final Set<String> pkgs, winLink, linLink;
+    private Set<Runnable> rs;
 
     @Override
     public MethodAccess getAdditionalMethods() {
@@ -82,6 +91,59 @@ public class NativeProjectDependencyHandler implements INativeProjectDependencyH
     @Override
     public void cmakeDependency(String name, Action<? super ICMakeSettings> modifier) {
         CMakeHelper.registerCMakeDependency(project, name, modifier);
+    }
+
+    @Override
+    public void projectDependency(String project) {
+        Project other = this.project.project(project);
+        this.project.getDependencies().add("implementation", other);
+
+        //this.project.getRootProject().afterEvaluate(a -> {
+        //this.project.getGradle().getTaskGraph().whenReady(a -> {
+
+            addExtension("nativeRuntimeRelease", other);
+            addExtension("nativeRuntimeDebug", other);
+        //});
+    }
+
+    @Override
+    public void projectApiDependency(String project) {
+        Project other = this.project.project(project);
+        this.project.getDependencies().add("api", other);
+
+        //this.project.getRootProject().afterEvaluate(a -> {
+        //this.project.getGradle().getTaskGraph().whenReady(a -> {
+        addExtension("nativeLinkDebug", other);
+        addExtension("nativeLinkRelease", other);
+        addExtension("nativeRuntimeRelease", other);
+        addExtension("nativeRuntimeDebug", other);
+        //});
+    }
+
+    private void addExtension(String name, Project other) {
+        //this.project.getDependencies().add(name, this.project.files(other.getConfigurations().getByName(name).resolve()));
+        //Runnable r =
+        try {
+            other.afterEvaluate(a -> {
+                Configuration o = other.getConfigurations().getByName(name);
+                other.afterEvaluate(a2 -> {
+                    //System.out.println("OTHER");
+                    //this.project.getConfigurations().getByName(name).extendsFrom(o);
+                    this.project.getDependencies().add(name, this.project.files(o.resolve()));
+                    //this.project.getConfigurations().getByName(name).extendsFrom(other.getConfigurations().getByName(name));
+                });
+            });
+        } catch (InvalidUserCodeException e) {
+            this.project.afterEvaluate(p -> {
+                //System.out.println("ME");
+                //this.project.getConfigurations().forEach(c -> System.out.println(c.getName()));
+                Configuration o = other.getConfigurations().getByName(name);
+                //this.project.getConfigurations().getByName(name).extendsFrom(o);
+                this.project.getDependencies().add(name, this.project.files(o.resolve()));
+            });
+        }
+
+
     }
 
     public Set<String> getLinuxPkgDeps() {

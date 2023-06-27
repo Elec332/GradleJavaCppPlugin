@@ -8,6 +8,7 @@ import nl.elec332.gradle.nativeplugin.util.Constants;
 import nl.elec332.gradle.util.Utils;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
@@ -49,7 +50,11 @@ public class CMakeHelper {
         CMakeSetupTask setupTaskDebug = project.getTasks().create("setupCMakeDebug_" + settings.getName(), CMakeSetupTask.class, settings, settings.getDebugBuildType());
         CMakeBuildTask buildTaskDebug = project.getTasks().create("buildCMakeDebug_" + settings.getName(), CMakeBuildTask.class, settings, settings.getDebugBuildType());
         buildTaskDebug.usingSetup(setupTaskDebug);
+        Task setupCMakePre = project.getTasks().create("setupCmakePre_" + settings.getName());
+        setupTaskRelease.dependsOn(setupCMakePre);
+        setupTaskDebug.dependsOn(setupCMakePre);
         project.afterEvaluate(p -> configureBinaries(project, settings));
+
         project.getTasks().getByName("build").dependsOn(buildTaskRelease);
         project.afterEvaluate(p -> {
             registerArtifacts(project, settings.getReleaseBuildType(), settings.getReleaseLinkerBinaries(), linkRelease, buildTaskRelease);
@@ -70,13 +75,16 @@ public class CMakeHelper {
     public static void registerCMakeDependency(Project project, String name, Action<? super ICMakeSettings> modifier) {
         ICMakeSettings settings = newSettings(project, name, null);
         modifier.execute(settings);
+
         CMakeSetupTask setupTaskRelease = project.getTasks().create("setupCMakeRelease_" + settings.getName(), CMakeSetupTask.class, settings, settings.getReleaseBuildType());
         CMakeBuildTask buildTaskRelease = project.getTasks().create("buildCMakeRelease_" + settings.getName(), CMakeBuildTask.class, settings, settings.getReleaseBuildType());
         buildTaskRelease.usingSetup(setupTaskRelease);
         CMakeSetupTask setupTaskDebug = project.getTasks().create("setupCMakeDebug_" + settings.getName(), CMakeSetupTask.class, settings, settings.getDebugBuildType());
         CMakeBuildTask buildTaskDebug = project.getTasks().create("buildCMakeDebug_" + settings.getName(), CMakeBuildTask.class, settings, settings.getDebugBuildType());
         buildTaskDebug.usingSetup(setupTaskDebug);
-
+        Task setupCMakePre = project.getTasks().create("setupCmakePre_" + settings.getName());
+        setupTaskRelease.dependsOn(setupCMakePre);
+        setupTaskDebug.dependsOn(setupCMakePre);
         project.afterEvaluate(p -> configureBinaries(project, settings));
 
         ConfigurableFileCollection headers = project.files(settings.getIncludeDirectory());

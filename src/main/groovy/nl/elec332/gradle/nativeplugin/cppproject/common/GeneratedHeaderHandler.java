@@ -15,11 +15,15 @@ import java.util.Objects;
  */
 public class GeneratedHeaderHandler {
 
-    public static void generateHeaders(File rootFolder, NativeProjectExtension extension) {
+    public static void generateHeaders(NativeProjectExtension extension) {
+        File rootFolder = extension.getGeneratedHeadersDir().getAsFile().get();
         File file = new File(rootFolder, extension.getGeneratedHeaderSubFolder().get());
-        file.mkdirs();
         generateIncludeHeader(file, extension);
         generateExportHeader(file, extension);
+        File[] files = file.listFiles();
+        if (file.exists() && (files == null || files.length == 0)) {
+            file.delete();
+        }
         extension.modifyCompiler(compiler -> compiler.includes(rootFolder));
     }
 
@@ -29,6 +33,7 @@ public class GeneratedHeaderHandler {
             file.delete();
         }
         if (!extension.getHeadersFound().isEmpty()) {
+            subFolder.mkdirs();
             extension.getHeadersFound().forEach(h -> {
                 GroovyHooks.inject(file, "#define " + extension.getHeaderIncludeCheck().get(h) + "\n");
             });
@@ -42,6 +47,7 @@ public class GeneratedHeaderHandler {
             file.delete();
         }
         if (extension.getGenerateExportHeader().get()) {
+            subFolder.mkdirs();
             String name = extension.getGeneratedHeaderSubFolder().get().toUpperCase(Locale.ROOT);
             try {
                 InputStream is = Objects.requireNonNull(GeneratedHeaderHandler.class.getClassLoader().getResource("exportbase.h")).openStream();

@@ -24,7 +24,7 @@ import java.util.*;
 public class NativeProjectExtension implements INativeProjectExtension {
 
     @Inject
-    public NativeProjectExtension(ObjectFactory objectFactory, Project project, File file) {
+    public NativeProjectExtension(ObjectFactory objectFactory, Project project) {
         this.project = project;
 
         linkage = objectFactory.setProperty(Linkage.class);
@@ -34,7 +34,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
         hIncCheckFound = new HashSet<>();
         ghf = objectFactory.property(String.class);
         depHandler = new NativeProjectDependencyHandler(objectFactory, project);
-        generatedHeaders = objectFactory.directoryProperty().fileValue(file);
+        generatedHeaders = objectFactory.directoryProperty();
         testArguments = objectFactory.setProperty(String.class);
         staticRuntime = objectFactory.property(Boolean.class);
         minimizeSize = objectFactory.property(Boolean.class);
@@ -50,7 +50,7 @@ public class NativeProjectExtension implements INativeProjectExtension {
         minimizeSize.set(false);
         generateExportHeader.set(false);
         staticTestRuntime.set(true);
-        singleRuntimeType.set(false);
+        singleRuntimeType.set(true);
     }
 
     private final Project project;

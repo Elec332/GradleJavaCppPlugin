@@ -33,8 +33,8 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
     @SuppressWarnings("UnstableApiUsage")
     public void apply(Project project) {
         PluginHelper.checkMinimumGradleVersion(Constants.GRADLE_VERSION);
-        File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
-        NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project, generatedHeaders);
+
+        NativeProjectExtension nativeProject = (NativeProjectExtension) project.getExtensions().create(INativeProjectExtension.class, "nativeProject", NativeProjectExtension.class, project);
 
         project.afterEvaluate(p -> {
 
@@ -95,10 +95,17 @@ public abstract class AbstractCppPlugin implements Plugin<Project> {
         project.getPluginManager().apply(getPluginType());
 
         project.afterEvaluate(p -> {
+            File generatedHeaders = new File(ProjectHelper.getBuildFolder(project), "/tmp/" + project.getName().trim().toLowerCase(Locale.ROOT) + "GeneratedHeaders");
+            if (!nativeProject.getGeneratedHeadersDir().isPresent()) {
+                nativeProject.getGeneratedHeadersDir().set(generatedHeaders);
+            }
 
             //Generate include header
-            GeneratedHeaderHandler.generateHeaders(generatedHeaders, nativeProject);
-
+            GeneratedHeaderHandler.generateHeaders(nativeProject);
+            File[] files = generatedHeaders.listFiles();
+            if (files == null || files.length == 0) {
+                generatedHeaders.delete();
+            }
         });
 
     }

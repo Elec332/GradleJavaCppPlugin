@@ -3,12 +3,17 @@ package nl.elec332.gradle.nativeplugin.base;
 import nl.elec332.gradle.nativeplugin.util.Constants;
 import nl.elec332.gradle.util.PluginHelper;
 import nl.elec332.gradle.util.ProjectHelper;
+import nl.elec332.gradle.util.Utils;
+import nl.elec332.gradle.util.abstraction.IProjectObjects;
 import nl.elec332.gradle.util.internal.GradleCoreInternals;
+import nl.elec332.gradle.util.internal.ProjectObjects;
 import org.gradle.api.Action;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.attributes.Usage;
+import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.language.ComponentWithBinaries;
 import org.gradle.language.cpp.*;
@@ -37,6 +42,11 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     public static final String LINKER_DEBUG = LINK + "Debug";
     public static final String RUNTIME_DEBUG = RUNTIME + "Debug";
 
+    public static Usage CPP_API_USAGE;
+    public static Usage LINK_USAGE;
+    public static Usage RUNTIME_USAGE;
+
+    public static IProjectObjects PROJECT_OBJECTS;
 
     private final Map<IComponentConfigurator<?>, Object> componentConfigurators = new LinkedHashMap<>();
     private final Map<IBinaryConfigurator<Object>, Object> binaryConfigurators = new LinkedHashMap<>();
@@ -55,6 +65,12 @@ public class CppUtilsPlugin implements ICppUtilsPlugin, Plugin<Project> {
     public void apply(Project project) {
         PluginHelper.checkMinimumGradleVersion(Constants.GRADLE_VERSION);
         this.project = project;
+
+        CPP_API_USAGE = project.getObjects().named(Usage.class, Usage.C_PLUS_PLUS_API);
+        LINK_USAGE = project.getObjects().named(Usage.class, Usage.NATIVE_LINK);
+        RUNTIME_USAGE = project.getObjects().named(Usage.class, Usage.NATIVE_RUNTIME);
+
+        PROJECT_OBJECTS = Utils.getProjectObjects(project);
 
         project.getConfigurations().create(HEADERS);
         project.getConfigurations().create(WINDOWS_HEADERS);
